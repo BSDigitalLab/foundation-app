@@ -57,6 +57,24 @@
   background-color: #f2f8f2;
 }
 
+/* Subtle Hero Atmospheric Breathe (Guarded by prefers-reduced-motion) */
+@keyframes heroAtmosphereBreathe {
+  0%, 100% {
+    opacity: 0.32;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.02);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero-atmosphere-pulse {
+    animation: heroAtmosphereBreathe 14s ease-in-out infinite;
+  }
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

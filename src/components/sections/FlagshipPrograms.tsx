@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { FLAGSHIP_PROGRAMS } from '../../data/mockData';
 import { Program } from '../../types';
 import { FadeIn } from '../motion/FadeIn';
@@ -20,6 +21,7 @@ const iconMap: Record<string, React.ReactNode> = {
 
 export const FlagshipPrograms: React.FC = () => {
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
+  const navigate = useNavigate();
 
   return (
     <section className="pt-10 sm:pt-12 pb-16 sm:pb-20 bg-[#fafaf7] relative overflow-hidden">
@@ -38,16 +40,20 @@ export const FlagshipPrograms: React.FC = () => {
           </div>
         </FadeIn>
 
-        {/* 8 Program Cards Grid */}
+        {/* Program Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 lg:gap-6">
           {FLAGSHIP_PROGRAMS.map((program, index) => {
             const isScholarship = program.id === 'scholarship-mission' || program.id === 'merit-scholarship' || program.title.toLowerCase().includes('scholarship');
+            const isChangepreneur = program.id === 'changepreneur-circle';
 
             return (
               <FadeIn key={program.id} direction="up" delay={index * 0.05}>
                 <div
                   onClick={(e) => {
-                    if (isScholarship) {
+                    if (isChangepreneur) {
+                      e.stopPropagation();
+                      navigate('/programs/changepreneur-circle');
+                    } else if (isScholarship) {
                       e.stopPropagation();
                       window.open('https://www.yuvaparipalan.com/', '_blank', 'noopener,noreferrer');
                     } else {
@@ -85,7 +91,18 @@ export const FlagshipPrograms: React.FC = () => {
                     </div>
 
                     <div className="flex items-center justify-end w-full">
-                      {isScholarship ? (
+                      {isChangepreneur ? (
+                        <Link
+                          to="/programs/changepreneur-circle"
+                          onClick={(e) => e.stopPropagation()}
+                          className="ml-auto"
+                        >
+                          <button className="bg-[#15803d] hover:bg-[#166534] text-white font-bold text-xs px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.03] flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-700">
+                            <span>Explore Circle</span>
+                            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform text-emerald-100" />
+                          </button>
+                        </Link>
+                      ) : isScholarship ? (
                         <a
                           href="https://www.yuvaparipalan.com/"
                           target="_blank"

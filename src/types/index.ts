@@ -10,6 +10,9 @@ export interface Program {
   highlights: string[];
   category: 'education' | 'tech' | 'entrepreneurship' | 'health' | 'community';
   featured?: boolean;
+  status?: 'active' | 'upcoming' | 'draft';
+  displayOrder?: number;
+  slug?: string;
 }
 
 export interface Leader {

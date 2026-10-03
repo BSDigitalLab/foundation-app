@@ -34,7 +34,7 @@ export const ProgramsPage: React.FC = () => {
     <>
       <SEOHead
         title="Programs & Flagship Missions - Yuvaparipalan Foundation"
-        description="Explore the 8 Flagship Missions of Yuvaparipalan Foundation: Scholarship Mission, Shepreneurs, AI Literacy, Digital Skills, and Healthcare."
+        description="Explore the Flagship Missions and Programs of Yuvaparipalan Foundation: Scholarship Mission, Changepreneur Circle, Shepreneurs, AI Literacy, and Healthcare."
       />
 
       <div className="pt-32 pb-24 bg-[#fafaf7]">
@@ -45,7 +45,7 @@ export const ProgramsPage: React.FC = () => {
                 Core Initiatives
               </span>
               <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
-                Our 8 Flagship Missions
+                Flagship Programs & Missions
               </h1>
               <p className="text-slate-700 text-base sm:text-lg font-medium">
                 Empowering individuals across education, technology, women entrepreneurship, leadership, and preventive health.
@@ -94,43 +94,55 @@ export const ProgramsPage: React.FC = () => {
           {/* Programs Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {filteredPrograms.map((program, idx) => (
-              <FadeIn key={program.id} direction="up" delay={idx * 0.05}>
-                <div id={program.id} className="p-8 rounded-3xl bg-white border border-emerald-900/15 hover:border-emerald-700/40 transition-all duration-300 space-y-6 shadow-sm hover:shadow-xl relative overflow-hidden">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
-                        {iconMap[program.iconName]}
-                      </div>
-                      <div>
-                        <Badge variant="emerald">{program.badge}</Badge>
-                        <h3 className="font-heading font-extrabold text-2xl text-slate-900 mt-1">
-                          {program.title}
-                        </h3>
-                      </div>
-                    </div>
-                  </div>
-
-                  <p className="text-sm text-slate-700 leading-relaxed font-medium">
-                    {program.fullDescription}
-                  </p>
-
-                  <div className="space-y-2">
-                    <h4 className="font-heading font-bold text-slate-900 text-xs uppercase tracking-wider">Program Highlights:</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700 font-medium">
-                      {program.highlights.map((h, i) => (
-                        <div key={i} className="flex items-start gap-2 bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-200">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-800 shrink-0 mt-0.5" />
-                          <span>{h}</span>
+              <FadeIn key={program.id} direction="up" delay={idx * 0.05} className="h-full">
+                <div id={program.id} className="p-8 rounded-3xl bg-white border border-emerald-900/15 hover:border-emerald-700/40 transition-all duration-300 shadow-sm hover:shadow-xl relative overflow-hidden flex flex-col justify-between h-full">
+                  <div className="space-y-6 flex-1 flex flex-col">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
+                          {iconMap[program.iconName]}
                         </div>
-                      ))}
+                        <div>
+                          <Badge variant="emerald">{program.badge}</Badge>
+                          <h3 className="font-heading font-extrabold text-2xl text-slate-900 mt-1">
+                            {program.title}
+                          </h3>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-slate-700 leading-relaxed font-medium">
+                      {program.fullDescription}
+                    </p>
+
+                    <div className="space-y-2 flex-1 flex flex-col">
+                      <h4 className="font-heading font-bold text-slate-900 text-xs uppercase tracking-wider">Program Highlights:</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700 font-medium">
+                        {program.highlights.map((h, i) => (
+                          <div key={i} className="flex items-start gap-2 bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-200">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-800 shrink-0 mt-0.5" />
+                            <span>{h}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="pt-4 mt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div className="text-xs font-mono font-bold text-emerald-900 flex items-center gap-1.5">
                       <Target className="w-4 h-4 text-emerald-800" /> {program.impactTarget}
                     </div>
-                    {program.id === 'scholarship-mission' || program.id === 'merit-scholarship' || program.title.toLowerCase().includes('scholarship') ? (
+                    {program.id === 'changepreneur-circle' ? (
+                      <Link
+                        to="/programs/changepreneur-circle"
+                        className="w-full sm:w-auto"
+                      >
+                        <button className="bg-[#15803d] hover:bg-[#166534] text-white font-bold text-xs px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.03] flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-700">
+                          <span>Explore & Join Circle</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-emerald-100" />
+                        </button>
+                      </Link>
+                    ) : program.id === 'scholarship-mission' || program.id === 'merit-scholarship' || program.title.toLowerCase().includes('scholarship') ? (
                       <a
                         href="https://www.yuvaparipalan.com/"
                         target="_blank"

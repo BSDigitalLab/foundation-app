@@ -62,6 +62,9 @@ function buildUserConfirmationHTML(formType: string, formData: Record<string, an
   } else if (formType === 'partner') {
     title = 'Institutional Partnership Application Received!';
     leadText = `Dear <strong>${formData.contactPerson}</strong> (${formData.organizationName}),<br/><br/>Thank you for initiating an institutional synergy with Yuvaparipalan Foundation. Our Corporate Relations team will connect with your organization within 24-48 business hours.`;
+  } else if (formType === 'changepreneur') {
+    title = 'Changepreneur Circle Membership Application Received!';
+    leadText = `Dear <strong>${formData.fullName}</strong>,<br/><br/>Thank you for applying to join the prestigious <strong>Changepreneur Circle</strong> of Yuvaparipalan Foundation. Your application has been logged. Our membership committee will review your details and connect with you directly with official onboarding instructions and payment coordination.`;
   }
 
   return `
@@ -119,7 +122,8 @@ function buildUserConfirmationHTML(formType: string, formData: Record<string, an
 function buildAdminIntimationHTML(formType: string, formData: Record<string, any>) {
   const formTypeName = 
     formType === 'volunteer' ? 'VOLUNTEER REGISTRATION' :
-    formType === 'partner' ? 'CSR / INSTITUTIONAL PARTNER APPLICATION' : 'GENERAL CONTACT INQUIRY';
+    formType === 'partner' ? 'CSR / INSTITUTIONAL PARTNER APPLICATION' :
+    formType === 'changepreneur' ? 'CHANGEPRENEUR CIRCLE MEMBERSHIP APPLICATION' : 'GENERAL CONTACT INQUIRY';
 
   const submitterName = formData.fullName || formData.contactPerson || 'Anonymous User';
   const submitterEmail = formData.email || 'N/A';

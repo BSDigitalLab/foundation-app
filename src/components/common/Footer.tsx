@@ -37,6 +37,11 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
+                <Link to="/programs/changepreneur-circle" className="hover:text-white transition-colors flex items-center gap-1.5 font-medium text-emerald-300">
+                  <ArrowRight className="w-3 h-3 text-emerald-400" /> Changepreneur Circle
+                </Link>
+              </li>
+              <li>
                 <Link to="/programs#shepreneurs-initiative" className="hover:text-white transition-colors flex items-center gap-1.5">
                   <ArrowRight className="w-3 h-3 text-emerald-400" /> Shepreneurs Initiative
                 </Link>
