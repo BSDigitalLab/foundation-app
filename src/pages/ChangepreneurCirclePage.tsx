@@ -570,7 +570,7 @@ export const ChangepreneurCirclePage: React.FC = () => {
         {/* Visual Rhythm:                                     */}
         {/* Yuvaparipalan Foundation                            */}
         {/* BE THE CHANGE / CREATE THE CHANGE / BECOME THE CHANGE*/}
-        {/* [ JOIN CHANGEpreneur CIRCLE ]                      */}
+        {/* [ JOIN Changepreneur CIRCLE ]                      */}
         {/* ================================================== */}
         <section className="relative pt-36 sm:pt-44 pb-24 sm:pb-32 lg:pb-36 overflow-hidden">
           {/* Custom Multi-Layered CSS Botanical & Geometric Background */}
@@ -606,7 +606,7 @@ export const ChangepreneurCirclePage: React.FC = () => {
                   className="w-full sm:w-auto h-[52px] bg-[#15803d] hover:bg-[#166534] text-white font-extrabold text-sm sm:text-base px-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-[1.02] flex items-center justify-center gap-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700"
                 >
                   <Sparkles className="w-5 h-5 text-emerald-100" />
-                  <span>JOIN CHANGEpreneur CIRCLE</span>
+                  <span>JOIN Changepreneur CIRCLE</span>
                   <ArrowRight className="w-5 h-5 text-white" />
                 </button>
               </div>
@@ -617,7 +617,7 @@ export const ChangepreneurCirclePage: React.FC = () => {
         {/* ================================================== */}
         {/* 2. CHANGEPRENEUR CIRCLE INTRODUCTION & FOCUS AREAS */}
         {/* Visual Rhythm:                                     */}
-        {/* CHANGEpreneur CIRCLE                               */}
+        {/* Changepreneur CIRCLE                               */}
         {/* Short positioning statement                        */}
         {/* [Personal] [Leadership] [Finance] [Inner] [Social Impact] */}
         {/* ================================================== */}
@@ -629,7 +629,7 @@ export const ChangepreneurCirclePage: React.FC = () => {
                   Program Overview
                 </span>
                 <h2 className="font-heading text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                  CHANGEpreneur CIRCLE
+                  Changepreneur CIRCLE
                 </h2>
                 <p className="text-slate-700 text-base sm:text-lg font-medium leading-relaxed">
                   A premier circle under Yuvaparipalan Foundation bringing together committed individuals to cultivate self-mastery, ethical leadership, and lasting social responsibility.
@@ -739,7 +739,7 @@ export const ChangepreneurCirclePage: React.FC = () => {
         {/* ================================================== */}
         {/* 4. CHANGEPRENEUR PREMIUM MEMBERSHIP & INCLUSIONS   */}
         {/* Visual Rhythm:                                     */}
-        {/* CHANGEpreneur Premium Membership                   */}
+        {/* Changepreneur Premium Membership                   */}
         {/* ₹30,000/- Annual Membership Fee                    */}
         {/* All 12 Membership Inclusions Grid                  */}
         {/* ================================================== */}
@@ -748,7 +748,7 @@ export const ChangepreneurCirclePage: React.FC = () => {
             <FadeIn direction="up">
               <div className="text-center max-w-3xl mx-auto space-y-4">
                 <span className="text-xs font-mono font-bold tracking-widest text-emerald-900 uppercase bg-emerald-100/70 px-4 py-1.5 rounded-full border border-emerald-300">
-                  CHANGEpreneur Premium Membership
+                  Changepreneur Premium Membership
                 </span>
                 <h2 className="font-heading text-3xl sm:text-5xl font-black text-slate-950 tracking-tight">
                   Membership Includes
@@ -1344,7 +1344,7 @@ export const ChangepreneurCirclePage: React.FC = () => {
         {/* ================================================== */}
         {/* 8. FINAL JOIN CTA SECTION                           */}
         {/* Visual Rhythm:                                     */}
-        {/* JOIN THE CHANGEpreneur CIRCLE                      */}
+        {/* JOIN THE Changepreneur CIRCLE                      */}
         {/* ₹30,000 / YEAR                                     */}
         {/* [ JOIN NOW ]                                       */}
         {/* ================================================== */}
