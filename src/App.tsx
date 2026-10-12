@@ -8,6 +8,7 @@ import { Loader2 } from 'lucide-react';
 const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
 const AboutPage = lazy(() => import('./pages/AboutPage').then((m) => ({ default: m.AboutPage })));
 const ProgramsPage = lazy(() => import('./pages/ProgramsPage').then((m) => ({ default: m.ProgramsPage })));
+const ProgramDetailPage = lazy(() => import('./pages/ProgramDetailPage').then((m) => ({ default: m.ProgramDetailPage })));
 const ChangepreneurCirclePage = lazy(() => import('./pages/ChangepreneurCirclePage').then((m) => ({ default: m.ChangepreneurCirclePage })));
 const ImpactPage = lazy(() => import('./pages/ImpactPage').then((m) => ({ default: m.ImpactPage })));
 const LeadershipPage = lazy(() => import('./pages/LeadershipPage').then((m) => ({ default: m.LeadershipPage })));
@@ -50,6 +51,7 @@ export const App: React.FC = () => {
               <Route path="/about" element={<AboutPage />} />
               <Route path="/programs" element={<ProgramsPage />} />
               <Route path="/programs/changepreneur-circle" element={<ChangepreneurCirclePage />} />
+              <Route path="/programs/:slug" element={<ProgramDetailPage />} />
               <Route path="/impact" element={<ImpactPage />} />
               <Route path="/leadership" element={<LeadershipPage />} />
               <Route path="/gallery" element={<GalleryPage />} />
