@@ -4,7 +4,7 @@
  */
 
 export interface FormSubmissionPayload {
-  formType: 'contact' | 'volunteer' | 'partner' | 'changepreneur';
+  formType: 'contact' | 'volunteer' | 'partner' | 'changepreneur' | 'changepreneur_payment_confirmed' | 'membership_payment_confirmed';
   formData: Record<string, any>;
 }
 

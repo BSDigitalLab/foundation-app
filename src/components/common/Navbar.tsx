@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../stores/useAppStore';
-import { Menu, X, Sparkles, HeartHandshake, GraduationCap, ChevronRight } from 'lucide-react';
+import { useCustomerAuthStore } from '../../stores/useCustomerAuthStore';
+import { Menu, X, Sparkles, HeartHandshake, GraduationCap, ChevronRight, User, LogOut } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 export const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const { isMobileMenuOpen, toggleMobileMenu, closeMobileMenu } = useAppStore();
+  const { isAuthenticated, customer, openModal, logout } = useCustomerAuthStore();
   const location = useLocation();
 
   useEffect(() => {
@@ -83,8 +85,32 @@ export const Navbar: React.FC = () => {
             {/* Vertical Divider */}
             <span className="h-5 w-px bg-slate-200 mx-1 inline-block" />
 
-            {/* Integrated Action CTA Buttons: "Be a Volunteer" (Primary Brand Green) & "Join Program" (Clean Yellow) */}
+            {/* Integrated Action CTA Buttons */}
             <div className="flex items-center gap-2">
+              {isAuthenticated ? (
+                <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200/80 rounded-full px-3 py-1 text-xs">
+                  <User className="w-3.5 h-3.5 text-emerald-800" />
+                  <span className="font-bold text-emerald-950 max-w-[100px] truncate">
+                    {customer?.first_name || customer?.phone_number || 'My Account'}
+                  </span>
+                  <button
+                    onClick={() => logout()}
+                    title="Sign Out"
+                    className="p-1 text-slate-400 hover:text-rose-600 transition-colors"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => openModal()}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs sm:text-sm px-3.5 py-2 rounded-full flex items-center gap-1.5 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-700 whitespace-nowrap"
+                >
+                  <User className="w-4 h-4 text-emerald-800" />
+                  <span>Sign In</span>
+                </button>
+              )}
+
               <Link to="/volunteer">
                 <button className="bg-[#15803d] hover:bg-[#166534] text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-full flex items-center gap-1.5 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-700 whitespace-nowrap">
                   <HeartHandshake className="w-4 h-4 text-emerald-100" />
@@ -152,6 +178,37 @@ export const Navbar: React.FC = () => {
             </nav>
 
             <div className="pt-4 border-t border-slate-200 space-y-2.5">
+              {isAuthenticated ? (
+                <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-emerald-800" />
+                    <span className="font-bold text-sm text-emerald-950">
+                      {customer?.first_name || customer?.phone_number || 'My Account'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      logout();
+                      closeMobileMenu();
+                    }}
+                    className="text-xs text-rose-600 font-bold hover:underline"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    openModal();
+                    closeMobileMenu();
+                  }}
+                  className="w-full justify-center bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm py-3 px-4 rounded-xl flex items-center gap-2 transition-all shadow-sm"
+                >
+                  <User className="w-4 h-4 text-emerald-800" />
+                  <span>Customer Sign In / Register</span>
+                </button>
+              )}
+
               <Link to="/volunteer" className="block w-full">
                 <button className="w-full justify-center bg-[#15803d] hover:bg-[#166534] text-white font-bold text-sm py-3 px-4 rounded-xl flex items-center gap-2 transition-all shadow-sm">
                   <HeartHandshake className="w-4 h-4 text-emerald-100" />

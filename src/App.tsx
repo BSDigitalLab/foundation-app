@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import { Navbar } from './components/common/Navbar';
 import { Footer } from './components/common/Footer';
 import { Loader2 } from 'lucide-react';
+import { CustomerAuthModal } from './components/auth/CustomerAuthModal';
+import { useCustomerAuthStore } from './stores/useCustomerAuthStore';
 
 // Lazy loading route components
 const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
@@ -39,11 +41,18 @@ const PageLoader: React.FC = () => (
 );
 
 export const App: React.FC = () => {
+  const fetchCurrentCustomer = useCustomerAuthStore((s) => s.fetchCurrentCustomer);
+
+  useEffect(() => {
+    fetchCurrentCustomer();
+  }, [fetchCurrentCustomer]);
+
   return (
     <Router>
       <ScrollToTop />
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white font-sans">
         <Navbar />
+        <CustomerAuthModal />
         <div className="flex-grow">
           <Suspense fallback={<PageLoader />}>
             <Routes>

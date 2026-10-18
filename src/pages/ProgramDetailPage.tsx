@@ -6,8 +6,16 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { 
   GraduationCap, Clock, Award, ShieldCheck, CheckCircle2, 
-  ArrowLeft, ArrowRight, Share2, Layers, BookOpen, AlertCircle, Loader2, Sparkles, Building2, Package
+  ArrowLeft, ArrowRight, Share2, Layers, BookOpen, AlertCircle, Loader2, Sparkles, Building2, Package, UserCheck
 } from 'lucide-react';
+import { useCustomerAuthStore } from '../stores/useCustomerAuthStore';
+import { 
+  createPaymentOrder, 
+  verifyPayment, 
+  loadRazorpayScript, 
+  CreateOrderResponse, 
+  VerifyPaymentResponse 
+} from '../services/paymentService';
 
 interface ProgramDetailData {
   id: string;
@@ -54,6 +62,81 @@ export const ProgramDetailPage: React.FC = () => {
   const [program, setProgram] = useState<ProgramDetailData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const { isAuthenticated, userAccountId, openModal } = useCustomerAuthStore();
+  const [checkoutState, setCheckoutState] = useState<'IDLE' | 'CREATING_ORDER' | 'CHECKOUT_OPEN' | 'VERIFYING' | 'SUCCESS' | 'FAILED'>('IDLE');
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [createdOrder, setCreatedOrder] = useState<CreateOrderResponse | null>(null);
+  const [fulfillment, setFulfillment] = useState<VerifyPaymentResponse | null>(null);
+
+  const handleInitiatePayment = async () => {
+    if (!isAuthenticated) {
+      openModal();
+      return;
+    }
+    if (!program) return;
+
+    setCheckoutState('CREATING_ORDER');
+    setCheckoutError(null);
+
+    try {
+      const order = await createPaymentOrder(program.id, userAccountId);
+      setCreatedOrder(order);
+
+      const scriptLoaded = await loadRazorpayScript();
+      if (scriptLoaded && (window as any).Razorpay && order.key_id && !order.key_id.includes('mock')) {
+        setCheckoutState('CHECKOUT_OPEN');
+        const options = {
+          key: order.key_id,
+          amount: order.amount_paise,
+          currency: order.currency,
+          name: 'Yuvaparipalan Foundation',
+          description: program.name,
+          order_id: order.gateway_order_id,
+          handler: async (response: any) => {
+            setCheckoutState('VERIFYING');
+            try {
+              const verifyRes = await verifyPayment(
+                {
+                  order_id: order.id,
+                  razorpay_order_id: response.razorpay_order_id || order.gateway_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  payment_method: 'razorpay_checkout',
+                },
+                userAccountId
+              );
+              setFulfillment(verifyRes);
+              setCheckoutState('SUCCESS');
+            } catch (vErr: any) {
+              setCheckoutError(vErr.message || 'Payment verification failed.');
+              setCheckoutState('FAILED');
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              setCheckoutState((curr) => (curr === 'SUCCESS' ? 'SUCCESS' : 'IDLE'));
+            },
+          },
+          theme: {
+            color: '#064e3b',
+          },
+        };
+
+        const rzpInstance = new (window as any).Razorpay(options);
+        rzpInstance.on('payment.failed', (resp: any) => {
+          setCheckoutError(resp?.error?.description || 'Payment was declined or failed.');
+          setCheckoutState('FAILED');
+        });
+        rzpInstance.open();
+      } else {
+        // Fallback or Test Environment Harness when external credentials are not yet configured
+        setCheckoutState('CHECKOUT_OPEN');
+      }
+    } catch (err: any) {
+      setCheckoutError(err.message || 'Failed to initiate payment.');
+      setCheckoutState('FAILED');
+    }
+  };
 
   useEffect(() => {
     if (!slug) return;
@@ -296,13 +379,123 @@ export const ProgramDetailPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Enrollment Action */}
+                  {/* Enrollment & Razorpay Checkout Action */}
                   <div className="space-y-3 pt-2">
-                    <Link to="/contact" className="block w-full">
-                      <Button variant="primary" className="w-full py-3.5 bg-emerald-800 hover:bg-emerald-900 text-white font-black text-sm tracking-wide rounded-2xl shadow-lg shadow-emerald-900/20">
-                        Enroll in Program <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
-                    </Link>
+                    {/* Error Alert */}
+                    {checkoutError && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 space-y-1">
+                        <div className="flex items-center gap-1.5 font-bold">
+                          <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                          <span>Payment Could Not Be Completed</span>
+                        </div>
+                        <p className="text-[11px] text-red-700">{checkoutError}</p>
+                      </div>
+                    )}
+
+                    {/* Success Confirmation Box */}
+                    {checkoutState === 'SUCCESS' && fulfillment && (
+                      <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl space-y-3 text-center">
+                        <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center mx-auto text-emerald-800">
+                          <CheckCircle2 className="w-6 h-6 text-emerald-700" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-sm text-slate-900">Payment Verified & Enrolled!</h4>
+                          <p className="text-xs text-emerald-800 mt-0.5">
+                            Official student subscription and benefit entitlements provisioned.
+                          </p>
+                        </div>
+                        <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100 text-[11px] font-mono space-y-1 text-slate-700">
+                          <div><span className="text-slate-400">Order:</span> {fulfillment.order_code || fulfillment.order_id}</div>
+                          {fulfillment.subscription_id && (
+                            <div><span className="text-slate-400">Subscription:</span> {fulfillment.subscription_id.slice(0, 13)}...</div>
+                          )}
+                          <div><span className="text-slate-400">Amount Paid:</span> ₹{(fulfillment.amount_paise / 100).toLocaleString('en-IN')}</div>
+                        </div>
+                        <Link to="/portal/wallet" className="block w-full">
+                          <Button variant="primary" className="w-full py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs rounded-xl shadow-md">
+                            View Benefit Wallet <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
+
+                    {/* Pending / In-Progress States */}
+                    {(checkoutState === 'CREATING_ORDER' || checkoutState === 'VERIFYING') && (
+                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col items-center justify-center space-y-2 text-center py-6">
+                        <Loader2 className="w-6 h-6 animate-spin text-emerald-800" />
+                        <span className="text-xs font-semibold text-slate-700">
+                          {checkoutState === 'CREATING_ORDER'
+                            ? 'Authorizing Order with Razorpay...'
+                            : 'Verifying Cryptographic Payment Signature & Fulfilling Curriculum...'}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Test Mode Simulation Confirmation (when external modal cannot open or test mode) */}
+                    {checkoutState === 'CHECKOUT_OPEN' && createdOrder && (
+                      <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl space-y-3">
+                        <div className="flex items-center gap-2 text-amber-900 text-xs font-bold">
+                          <ShieldCheck className="w-4 h-4 text-amber-700 flex-shrink-0" />
+                          <span>Razorpay Test Mode Order Ready</span>
+                        </div>
+                        <p className="text-[11px] text-amber-800">
+                          Order <span className="font-mono font-bold">{createdOrder.gateway_order_id}</span> created for ₹{(createdOrder.amount_paise / 100).toLocaleString('en-IN')}.
+                        </p>
+                        <Button
+                          onClick={async () => {
+                            setCheckoutState('VERIFYING');
+                            try {
+                              const verifyRes = await verifyPayment(
+                                {
+                                  order_id: createdOrder.id,
+                                  razorpay_order_id: createdOrder.gateway_order_id,
+                                  razorpay_payment_id: `pay_test_${Date.now().toString().slice(-8)}`,
+                                  razorpay_signature: 'test_mode_simulated_signature',
+                                  payment_method: 'test_simulation',
+                                },
+                                userAccountId
+                              );
+                              setFulfillment(verifyRes);
+                              setCheckoutState('SUCCESS');
+                            } catch (vErr: any) {
+                              setCheckoutError(vErr.message || 'Payment verification failed.');
+                              setCheckoutState('FAILED');
+                            }
+                          }}
+                          variant="primary"
+                          className="w-full py-2.5 bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs rounded-xl"
+                        >
+                          Confirm Test Checkout Verification
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Standard Trigger Button */}
+                    {checkoutState !== 'SUCCESS' && checkoutState !== 'CREATING_ORDER' && checkoutState !== 'VERIFYING' && checkoutState !== 'CHECKOUT_OPEN' && (
+                      <>
+                        {isAuthenticated ? (
+                          <Button
+                            onClick={handleInitiatePayment}
+                            variant="primary"
+                            className="w-full py-3.5 bg-emerald-800 hover:bg-emerald-900 text-white font-black text-sm tracking-wide rounded-2xl shadow-lg shadow-emerald-900/20 cursor-pointer flex items-center justify-center gap-2"
+                          >
+                            <ShieldCheck className="w-4 h-4 text-emerald-300" />
+                            <span>
+                              Pay Subsidized Fee (₹{program.commercials.subscription_price.toLocaleString('en-IN')})
+                            </span>
+                            <ArrowRight className="w-4 h-4 ml-1" />
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => openModal()}
+                            variant="primary"
+                            className="w-full py-3.5 bg-emerald-800 hover:bg-emerald-900 text-white font-black text-sm tracking-wide rounded-2xl shadow-lg shadow-emerald-900/20 cursor-pointer"
+                          >
+                            Login to Enroll <ArrowRight className="w-4 h-4 ml-2" />
+                          </Button>
+                        )}
+                      </>
+                    )}
 
                     {program.media.brochure_url && (
                       <a
