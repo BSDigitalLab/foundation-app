@@ -16,6 +16,7 @@ import {
   CreateOrderResponse, 
   VerifyPaymentResponse 
 } from '../services/paymentService';
+import { getPlatformApiBaseUrl } from '../config/apiConfig';
 
 interface ProgramDetailData {
   id: string;
@@ -143,7 +144,7 @@ export const ProgramDetailPage: React.FC = () => {
     setLoading(true);
     setError(null);
 
-    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const apiBase = getPlatformApiBaseUrl();
     fetch(`${apiBase}/api/v1/public/programs/${slug}`)
       .then(async (res) => {
         if (!res.ok) {

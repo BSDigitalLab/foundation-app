@@ -3,7 +3,9 @@
  * Governed by Phase 5 Directive
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import { getPlatformApiBaseUrl } from '../config/apiConfig';
+
+const getApiBase = () => getPlatformApiBaseUrl();
 
 export interface CreateOrderResponse {
   id: string;
@@ -79,7 +81,7 @@ export const loadRazorpayScript = (): Promise<boolean> => {
  * Fetch configuration status diagnostics from the backend.
  */
 export const fetchPaymentConfigStatus = async (): Promise<PaymentConfigStatus> => {
-  const res = await fetch(`${API_BASE}/api/v1/payments/config-status`, {
+  const res = await fetch(`${getApiBase()}/api/v1/payments/config-status`, {
     credentials: 'include',
   });
   if (!res.ok) {
@@ -124,7 +126,7 @@ export const createPaymentOrder = async (
     payload.notes = customerDetails.notes;
   }
 
-  const res = await fetch(`${API_BASE}/api/v1/payments/orders`, {
+  const res = await fetch(`${getApiBase()}/api/v1/payments/orders`, {
     method: 'POST',
     headers,
     credentials: 'include',
@@ -152,7 +154,7 @@ export const verifyPayment = async (
     headers['X-Customer-User-Id'] = userAccountId;
   }
 
-  const res = await fetch(`${API_BASE}/api/v1/payments/verify`, {
+  const res = await fetch(`${getApiBase()}/api/v1/payments/verify`, {
     method: 'POST',
     headers,
     credentials: 'include',

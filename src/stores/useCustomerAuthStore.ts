@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getPlatformApiBaseUrl } from '../config/apiConfig';
 
 export interface CustomerProfile {
   id: string;
@@ -34,7 +35,7 @@ export interface CustomerAuthState {
   clearError: () => void;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const getApiBase = () => getPlatformApiBaseUrl();
 
 export const useCustomerAuthStore = create<CustomerAuthState>((set, get) => ({
   isAuthenticated: false,
@@ -54,7 +55,7 @@ export const useCustomerAuthStore = create<CustomerAuthState>((set, get) => ({
   requestOtp: async (phone: string, attribution = {}) => {
     set({ isLoading: true, error: null, successMessage: null });
     try {
-      const res = await fetch(`${API_BASE}/api/v1/customer/auth/request-otp`, {
+      const res = await fetch(`${getApiBase()}/api/v1/customer/auth/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -102,7 +103,7 @@ export const useCustomerAuthStore = create<CustomerAuthState>((set, get) => ({
 
     set({ isLoading: true, error: null });
     try {
-      const res = await fetch(`${API_BASE}/api/v1/customer/auth/verify-otp`, {
+      const res = await fetch(`${getApiBase()}/api/v1/customer/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include', // Includes HTTP-only session cookie
@@ -139,7 +140,7 @@ export const useCustomerAuthStore = create<CustomerAuthState>((set, get) => ({
 
   fetchCurrentCustomer: async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/v1/customer/auth/me`, {
+      const res = await fetch(`${getApiBase()}/api/v1/customer/auth/me`, {
         method: 'GET',
         credentials: 'include',
       });
@@ -167,7 +168,7 @@ export const useCustomerAuthStore = create<CustomerAuthState>((set, get) => ({
 
   logout: async () => {
     try {
-      await fetch(`${API_BASE}/api/v1/customer/auth/logout`, {
+      await fetch(`${getApiBase()}/api/v1/customer/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });
