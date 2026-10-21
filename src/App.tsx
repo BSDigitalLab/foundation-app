@@ -12,6 +12,7 @@ const AboutPage = lazy(() => import('./pages/AboutPage').then((m) => ({ default:
 const ProgramsPage = lazy(() => import('./pages/ProgramsPage').then((m) => ({ default: m.ProgramsPage })));
 const ProgramDetailPage = lazy(() => import('./pages/ProgramDetailPage').then((m) => ({ default: m.ProgramDetailPage })));
 const ChangepreneurCirclePage = lazy(() => import('./pages/ChangepreneurCirclePage').then((m) => ({ default: m.ChangepreneurCirclePage })));
+const CareerExcellenceScholarshipPage = lazy(() => import('./pages/CareerExcellenceScholarshipPage').then((m) => ({ default: m.CareerExcellenceScholarshipPage })));
 const ImpactPage = lazy(() => import('./pages/ImpactPage').then((m) => ({ default: m.ImpactPage })));
 const LeadershipPage = lazy(() => import('./pages/LeadershipPage').then((m) => ({ default: m.LeadershipPage })));
 const GalleryPage = lazy(() => import('./pages/GalleryPage').then((m) => ({ default: m.GalleryPage })));
@@ -60,6 +61,8 @@ export const App: React.FC = () => {
               <Route path="/about" element={<AboutPage />} />
               <Route path="/programs" element={<ProgramsPage />} />
               <Route path="/programs/changepreneur-circle" element={<ChangepreneurCirclePage />} />
+              <Route path="/programs/career-excellence-scholarship-program" element={<CareerExcellenceScholarshipPage />} />
+              <Route path="/programs/cesp" element={<CareerExcellenceScholarshipPage />} />
               <Route path="/programs/:slug" element={<ProgramDetailPage />} />
               <Route path="/impact" element={<ImpactPage />} />
               <Route path="/leadership" element={<LeadershipPage />} />

@@ -21,6 +21,11 @@
     <priority>0.95</priority>
   </url>
   <url>
+    <loc>https://www.yuvaparipalan.org/programs/career-excellence-scholarship-program</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
     <loc>https://www.yuvaparipalan.org/impact</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>

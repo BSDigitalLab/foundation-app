@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import {
   Search, GraduationCap, Sparkles, BrainCircuit, Laptop, HeartPulse,
   ShieldCheck, Coins, UsersRound, ArrowRight, Target, CheckCircle2,
-  Clock, Compass, Sparkle, AlertCircle, RefreshCw
+  Sparkle, AlertCircle, RefreshCw
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { getPlatformApiBaseUrl } from '../config/apiConfig';
@@ -356,6 +356,9 @@ export const ProgramsPage: React.FC = () => {
                   const isChangepreneur =
                     program.program_code === 'CCPM100' ||
                     program.public_slug.includes('changepreneur');
+                  const isCESP =
+                    program.program_code === 'CESP100' ||
+                    program.public_slug.includes('career-excellence');
 
                   return (
                     <FadeIn key={program.id || program.program_code} direction="up" delay={idx * 0.05} className="h-full">
@@ -444,6 +447,16 @@ export const ProgramsPage: React.FC = () => {
                             >
                               <button className="bg-[#15803d] hover:bg-[#166534] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.03] flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-700 w-full sm:w-auto">
                                 <span>Explore & Join Circle</span>
+                                <ArrowRight className="w-3.5 h-3.5 text-emerald-100" />
+                              </button>
+                            </Link>
+                          ) : isCESP ? (
+                            <Link
+                              to="/programs/career-excellence-scholarship-program"
+                              className="w-full sm:w-auto"
+                            >
+                              <button className="bg-[#15803d] hover:bg-[#166534] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.03] flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-700 w-full sm:w-auto">
+                                <span>Explore & Enroll</span>
                                 <ArrowRight className="w-3.5 h-3.5 text-emerald-100" />
                               </button>
                             </Link>

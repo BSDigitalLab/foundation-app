@@ -310,6 +310,137 @@ function buildPaymentConfirmationHTML(formData: Record<string, any>) {
   `;
 }
 
+// Generate Official Post-Payment Tax Invoice & Enrollment Receipt HTML for CESP100 (₹549)
+function buildCESPPaymentConfirmationHTML(formData: Record<string, any>) {
+  const candidateName = formData.fullName || 'Candidate';
+  const orderCode = formData.orderCode || formData.order_code || 'ORD-CESP';
+  const paymentId = formData.paymentId || formData.razorpay_payment_id || 'PAY-VERIFIED';
+  const transactionDate = formData.transactionDate || new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'long', timeStyle: 'short' });
+  const paymentMethod = formData.paymentMethod || 'Razorpay Enterprise Gateway';
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Payment Confirmed & Enrollment Activated — Career Excellence & Scholarship Program (CESP100)</title>
+    </head>
+    <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px; color: #334155;">
+      <div style="max-width: 680px; margin: 0 auto; background-color: #ffffff; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+        
+        <!-- Header Banner -->
+        <div style="background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #059669 100%); padding: 36px 30px; text-align: center; color: #ffffff;">
+          <div style="display: inline-block; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 9999px; padding: 6px 16px; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px;">
+            Official Tax Invoice & Enrollment Receipt
+          </div>
+          <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">YUVAPARIPALAN FOUNDATION</h1>
+          <p style="margin: 6px 0 0 0; font-size: 13px; color: #a7f3d0; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Career Excellence & Scholarship Program (CESP100)</p>
+        </div>
+
+        <!-- Success Hero -->
+        <div style="padding: 32px 32px 20px 32px; border-bottom: 1px solid #f1f5f9;">
+          <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 14px; padding: 18px 20px; margin-bottom: 24px;">
+            <div style="color: #065f46; font-size: 16px; font-weight: 800; margin-bottom: 4px;">
+              ✓ Payment Verified & Enrollment Confirmed
+            </div>
+            <div style="color: #047857; font-size: 13px; line-height: 1.5;">
+              Dear <strong>${candidateName}</strong>, your subsidized program enrollment fee of <strong>₹549.00</strong> has been confirmed and registered in the Yuvaparipalan Foundation Academic Registry. Welcome to the Career Excellence & Scholarship Program!
+            </div>
+          </div>
+
+          <!-- Transaction Summary Cards -->
+          <table style="width: 100%; border-collapse: separate; border-spacing: 10px 0; margin-bottom: 24px;">
+            <tr>
+              <td style="width: 50%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px;">
+                <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.5px;">Order Reference</div>
+                <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-top: 4px; font-family: monospace;">${orderCode}</div>
+              </td>
+              <td style="width: 50%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px;">
+                <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.5px;">Razorpay Payment ID</div>
+                <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-top: 4px; font-family: monospace;">${paymentId}</div>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Tax Invoice Schedule -->
+          <div style="border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; margin-bottom: 26px;">
+            <div style="background: #0f2d1e; color: #ffffff; padding: 12px 18px; font-size: 13px; font-weight: 700;">
+              Invoice & Financial Settlement Summary
+            </div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <tbody>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 11px 18px; color: #64748b; width: 45%;">Program Code & Title</td>
+                  <td style="padding: 11px 18px; font-weight: 700; color: #0f172a;">Career Excellence & Scholarship Program (CESP100)</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9; background: #fafafa;">
+                  <td style="padding: 11px 18px; color: #64748b;">Candidate Name</td>
+                  <td style="padding: 11px 18px; font-weight: 600; color: #0f172a;">${candidateName}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 11px 18px; color: #64748b;">Contact Details</td>
+                  <td style="padding: 11px 18px; color: #0f172a;">${formData.email || 'N/A'} • ${formData.phone || 'N/A'}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9; background: #fafafa;">
+                  <td style="padding: 11px 18px; color: #64748b;">District & State</td>
+                  <td style="padding: 11px 18px; color: #0f172a;">${formData.district || 'Kerala'}, ${formData.state || 'India'}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 11px 18px; color: #64748b;">Transaction Timestamp</td>
+                  <td style="padding: 11px 18px; color: #0f172a;">${transactionDate}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9; background: #fafafa;">
+                  <td style="padding: 11px 18px; color: #64748b;">Payment Method / Gateway</td>
+                  <td style="padding: 11px 18px; color: #0f172a;">${paymentMethod}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 11px 18px; color: #64748b;">Taxable Base Value</td>
+                  <td style="padding: 11px 18px; color: #0f172a;">₹465.25</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0; background: #fafafa;">
+                  <td style="padding: 11px 18px; color: #64748b;">Integrated GST (18% / CGST 9% ₹41.88 + SGST 9% ₹41.87)</td>
+                  <td style="padding: 11px 18px; color: #0f172a;">₹83.75</td>
+                </tr>
+                <tr style="background: #ecfdf5; font-size: 15px; font-weight: 800;">
+                  <td style="padding: 14px 18px; color: #065f46;">Total Subsidized Fee Paid</td>
+                  <td style="padding: 14px 18px; color: #065f46;">₹549.00 (INR)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Allocated Entitlements Box -->
+          <div style="background: #fdfdfd; border: 1px solid #cbd5e1; border-radius: 14px; padding: 20px; margin-bottom: 24px;">
+            <div style="font-size: 14px; font-weight: 800; color: #064e3b; margin-bottom: 12px;">
+              ★ Your Activated Program Inclusions & Next Steps:
+            </div>
+            <ul style="margin: 0; padding-left: 20px; color: #334155; font-size: 13px; line-height: 1.8;">
+              <li><strong>Eduzet Aptitude Assessment:</strong> Diagnostic test credentials will be issued to your registered email and mobile.</li>
+              <li><strong>Palana Neurosync Vikas:</strong> 180-Day cognitive development access pass activated.</li>
+              <li><strong>AI Basics Workshop:</strong> Schedule and live interactive classroom links will be dispatched via WhatsApp.</li>
+              <li><strong>Language Fluency Modules:</strong> Communicative English and Nalla Malayalam schedules.</li>
+              <li><strong>Mentorship & Scholarship Pathway:</strong> 1-on-1 counseling session slot booking.</li>
+            </ul>
+          </div>
+
+          <p style="font-size: 13px; color: #64748b; line-height: 1.6; margin-bottom: 0;">
+            This electronic document serves as an authentic payment receipt and tax invoice issued by Yuvaparipalan Foundation. If you need any assistance regarding your onboarding or test scheduling, reach out directly to the Academic Secretariat at <strong>secretariat@yuvaparipalan.org</strong> or <strong>+91 95628 58868</strong>.
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f8fafc; padding: 22px 28px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0;">
+          <p style="margin: 0 0 4px 0; font-weight: 700; color: #334155;">Yuvaparipalan Foundation (Section 8 Non-Profit Organization)</p>
+          <p style="margin: 0 0 6px 0;">CIN: U85300TZ2021NPL035824 • Registered Offices: Coimbatore, TN & Kannur, KL, India</p>
+          <p style="margin: 0; color: #94a3b8;">© ${new Date().getFullYear()} Yuvaparipalan Foundation. All rights reserved.</p>
+        </div>
+
+      </div>
+    </body>
+    </html>
+  `;
+}
+
 /**
  * Sends both Confirmation Email to user & Intimation Email to Admin
  */
@@ -320,21 +451,26 @@ export async function sendFormSubmissionEmails(formType: string, formData: Recor
   }
 
   const submitterName = formData.fullName || formData.contactPerson || 'User';
-  const isPaymentConfirmed = formType === 'changepreneur_payment_confirmed' || formType === 'membership_payment_confirmed';
+  const isChangepreneurPayment = formType === 'changepreneur_payment_confirmed' || formType === 'membership_payment_confirmed';
+  const isCESPPayment = formType === 'cesp_payment_confirmed';
   const orderRef = formData.orderCode || formData.order_code || '';
 
   // 1. Send Confirmation Email to Submitting Person
   const userMailOptions = {
     from: `"${SMTP_FROM_NAME}" <${SMTP_FROM_EMAIL}>`,
     to: recipientEmail,
-    subject: isPaymentConfirmed
+    subject: isCESPPayment
+      ? `Payment Confirmed & Enrollment Activated — Career Excellence & Scholarship Program (${orderRef || '₹549'})`
+      : isChangepreneurPayment
       ? `Payment Confirmed & Membership Activated - Changepreneur Circle (${orderRef || '₹30,000'})`
       : formType === 'volunteer'
       ? `Volunteer Registration Received - Yuvaparipalan Foundation`
       : formType === 'partner'
       ? `Partnership Inquiry Received - Yuvaparipalan Foundation`
       : `Thank you for contacting Yuvaparipalan Foundation`,
-    html: isPaymentConfirmed
+    html: isCESPPayment
+      ? buildCESPPaymentConfirmationHTML(formData)
+      : isChangepreneurPayment
       ? buildPaymentConfirmationHTML(formData)
       : buildUserConfirmationHTML(formType, formData),
   };
@@ -344,10 +480,14 @@ export async function sendFormSubmissionEmails(formType: string, formData: Recor
     from: `"${SMTP_FROM_NAME}" <${SMTP_FROM_EMAIL}>`,
     to: SMTP_FROM_EMAIL,
     replyTo: recipientEmail,
-    subject: isPaymentConfirmed
+    subject: isCESPPayment
+      ? `[PAYMENT CONFIRMED] ₹549 CESP100 Enrollment - ${submitterName} (${orderRef})`
+      : isChangepreneurPayment
       ? `[PAYMENT CONFIRMED] ₹30,000 Changepreneur Circle Membership - ${submitterName} (${orderRef})`
       : `[WEBSITE SUBMISSION] New ${formType.toUpperCase()} request from ${submitterName}`,
-    html: isPaymentConfirmed
+    html: isCESPPayment
+      ? buildCESPPaymentConfirmationHTML(formData)
+      : isChangepreneurPayment
       ? buildPaymentConfirmationHTML(formData)
       : buildAdminIntimationHTML(formType, formData),
   };
