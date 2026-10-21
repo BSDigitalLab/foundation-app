@@ -9,7 +9,7 @@ const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
 const SMTP_USERNAME = process.env.SMTP_USERNAME || 'support@yuvaparipalan.org';
 const SMTP_PASSWORD = (process.env.SMTP_PASSWORD || '').replace(/\s+/g, '');
-const SMTP_FROM_EMAIL = process.env.SMTP_FROM_EMAIL || 'support@yuvaparipalan.org';
+const SMTP_FROM_EMAIL = process.env.SMTP_FROM_EMAIL || 'noreply@yuvaparipalan.org';
 const SMTP_FROM_NAME = (process.env.SMTP_FROM_NAME || 'Yuvaparipalan Foundation').replace(/"/g, '');
 
 // Create reusable Nodemailer transporter object using SMTP transport
