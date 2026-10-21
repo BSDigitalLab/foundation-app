@@ -10,7 +10,7 @@ export interface FormSubmissionPayload {
 
 export async function sendSubmissionEmail(payload: FormSubmissionPayload): Promise<{ success: boolean; message?: string }> {
   const { formType, formData } = payload;
-  const adminEmail = 'brandingsparrowdl@gmail.com';
+  const adminEmail = 'support@yuvaparipalan.org';
   const submitterName = formData.fullName || formData.contactPerson || 'User';
 
   // 1. Try local dev/server API endpoint first
