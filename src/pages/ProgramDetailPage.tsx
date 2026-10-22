@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useLocation, Link } from 'react-router-dom';
 import { SEOHead } from '../components/common/SEOHead';
 import { FadeIn } from '../components/motion/FadeIn';
 import { Button } from '../components/ui/Button';
@@ -60,6 +60,7 @@ interface ProgramDetailData {
 
 export const ProgramDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
+  const location = useLocation();
   const [program, setProgram] = useState<ProgramDetailData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +69,44 @@ export const ProgramDetailPage: React.FC = () => {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [createdOrder, setCreatedOrder] = useState<CreateOrderResponse | null>(null);
   const [fulfillment, setFulfillment] = useState<VerifyPaymentResponse | null>(null);
+
+  // Helper to extract attribution parameters from URL or sessionStorage
+  const getAttribution = () => {
+    const params = new URLSearchParams(location.search);
+    let cached: Record<string, string> = {};
+    try {
+      const raw = sessionStorage.getItem('yp_campaign_attribution');
+      if (raw) cached = JSON.parse(raw);
+    } catch (e) {
+      // ignore
+    }
+
+    const ref = params.get('ref') || cached.ref || '';
+    const programId = params.get('program_id') || params.get('pid') || cached.program_id || '';
+    const campaignId = params.get('campaign_id') || params.get('cid') || cached.campaign_id || '';
+    const campaign = params.get('campaign') || cached.campaign || campaignId || '';
+    const crid = params.get('crid') || cached.crid || '';
+    const sid = params.get('sid') || cached.sid || '';
+    const src = params.get('src') || cached.src || '';
+
+    const attr: Record<string, string> = {};
+    if (ref) attr.ref = ref;
+    if (programId) attr.program_id = programId;
+    if (campaignId) attr.campaign_id = campaignId;
+    if (campaign) attr.campaign = campaign;
+    if (crid) attr.crid = crid;
+    if (sid) attr.sid = sid;
+    if (src) attr.src = src;
+
+    if (Object.keys(attr).length > 0) {
+      try {
+        sessionStorage.setItem('yp_campaign_attribution', JSON.stringify(attr));
+      } catch (e) {
+        // ignore
+      }
+    }
+    return attr;
+  };
 
   const handleInitiatePayment = async () => {
     if (!isAuthenticated) {
@@ -80,7 +119,23 @@ export const ProgramDetailPage: React.FC = () => {
     setCheckoutError(null);
 
     try {
-      const order = await createPaymentOrder(program.id, userAccountId);
+      const attr = getAttribution();
+      const notes: Record<string, any> = {
+        program_id: program.id,
+      };
+      if (attr.ref) {
+        notes.ref = attr.ref;
+        notes.referral_code = attr.ref;
+      }
+      if (attr.campaign_id) notes.campaign_id = attr.campaign_id;
+      if (attr.campaign) notes.campaign_code = attr.campaign;
+      if (attr.crid) notes.crid = attr.crid;
+      if (attr.sid) notes.sid = attr.sid;
+      if (attr.src) notes.src = attr.src;
+
+      const order = await createPaymentOrder(program.id, userAccountId, {
+        notes,
+      });
       setCreatedOrder(order);
 
       const scriptLoaded = await loadRazorpayScript();
@@ -145,7 +200,18 @@ export const ProgramDetailPage: React.FC = () => {
     setError(null);
 
     const apiBase = getPlatformApiBaseUrl();
-    fetch(`${apiBase}/api/v1/public/programs/${slug}`)
+    const attr = getAttribution();
+    const query = new URLSearchParams();
+    if (attr.ref) query.set('ref', attr.ref);
+    if (attr.program_id) query.set('program_id', attr.program_id);
+    if (attr.campaign_id) query.set('campaign_id', attr.campaign_id);
+    if (attr.campaign) query.set('campaign', attr.campaign);
+    if (attr.crid) query.set('crid', attr.crid);
+    if (attr.sid) query.set('sid', attr.sid);
+    if (attr.src) query.set('src', attr.src);
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+
+    fetch(`${apiBase}/api/v1/public/programs/${slug}${queryString}`)
       .then(async (res) => {
         if (!res.ok) {
           if (res.status === 404) {
@@ -169,7 +235,7 @@ export const ProgramDetailPage: React.FC = () => {
       .finally(() => {
         setLoading(false);
       });
-  }, [slug]);
+  }, [slug, location.search]);
 
   if (loading) {
     return (

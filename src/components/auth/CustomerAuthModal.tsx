@@ -24,12 +24,20 @@ export const CustomerAuthModal: React.FC = () => {
   const [lastName, setLastName] = useState('');
   const [step, setStep] = useState<'PHONE' | 'OTP'>('PHONE');
 
-  // Extract attribution parameters from URL (e.g. ?campaign=...&ref=...&crid=...&sid=...&src=...)
+  // Extract attribution parameters from URL or sessionStorage (e.g. ?campaign=...&ref=...&program_id=...&campaign_id=...)
   const getAttribution = () => {
     const params = new URLSearchParams(location.search);
+    let cached: Record<string, string> = {};
+    try {
+      const raw = sessionStorage.getItem('yp_campaign_attribution');
+      if (raw) cached = JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+
     const attr: Record<string, string> = {};
-    for (const key of ['campaign', 'ref', 'crid', 'sid', 'src']) {
-      const val = params.get(key);
+    for (const key of ['campaign', 'campaign_id', 'program_id', 'ref', 'crid', 'sid', 'src']) {
+      const val = params.get(key) || cached[key];
       if (val) attr[key] = val;
     }
     return attr;
