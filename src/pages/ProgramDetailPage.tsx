@@ -12,6 +12,7 @@ import { useCustomerAuthStore } from '../stores/useCustomerAuthStore';
 import { 
   createPaymentOrder, 
   verifyPayment, 
+  recordPaymentFailure,
   loadRazorpayScript, 
   CreateOrderResponse, 
   VerifyPaymentResponse 
@@ -64,7 +65,7 @@ export const ProgramDetailPage: React.FC = () => {
   const [program, setProgram] = useState<ProgramDetailData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const { isAuthenticated, userAccountId, openModal } = useCustomerAuthStore();
+  const { isAuthenticated, userAccountId, customer, openModal } = useCustomerAuthStore();
   const [checkoutState, setCheckoutState] = useState<'IDLE' | 'CREATING_ORDER' | 'CHECKOUT_OPEN' | 'VERIFYING' | 'SUCCESS' | 'FAILED'>('IDLE');
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [createdOrder, setCreatedOrder] = useState<CreateOrderResponse | null>(null);
@@ -133,14 +134,28 @@ export const ProgramDetailPage: React.FC = () => {
       if (attr.sid) notes.sid = attr.sid;
       if (attr.src) notes.src = attr.src;
 
-      const order = await createPaymentOrder(program.id, userAccountId, {
+      const customerName = customer ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() : '';
+      const customerPhone = customer?.phone_number || '';
+      const customerEmail = (customer as any)?.email || '';
+
+      const customerDetails = customer ? {
+        customer_phone: customerPhone,
+        customer_name: customerName,
+        customer_email: customerEmail || undefined,
         notes,
-      });
+      } : { notes };
+
+      const order = await createPaymentOrder(program.id, userAccountId, customerDetails);
       setCreatedOrder(order);
 
       const scriptLoaded = await loadRazorpayScript();
       if (scriptLoaded && (window as any).Razorpay && order.key_id && !order.key_id.includes('mock')) {
         setCheckoutState('CHECKOUT_OPEN');
+        const prefillData: Record<string, string> = {};
+        if (customerName) prefillData.name = customerName;
+        if (customerEmail) prefillData.email = customerEmail;
+        if (customerPhone) prefillData.contact = customerPhone;
+
         const options = {
           key: order.key_id,
           amount: order.amount_paise,
@@ -148,6 +163,7 @@ export const ProgramDetailPage: React.FC = () => {
           name: 'Yuvaparipalan Foundation',
           description: program.name,
           order_id: order.gateway_order_id,
+          prefill: Object.keys(prefillData).length > 0 ? prefillData : undefined,
           handler: async (response: any) => {
             setCheckoutState('VERIFYING');
             try {
@@ -164,8 +180,21 @@ export const ProgramDetailPage: React.FC = () => {
               setFulfillment(verifyRes);
               setCheckoutState('SUCCESS');
             } catch (vErr: any) {
-              setCheckoutError(vErr.message || 'Payment verification failed.');
+              const failMsg = vErr.message || 'Payment verification failed.';
+              setCheckoutError(failMsg);
               setCheckoutState('FAILED');
+              recordPaymentFailure(
+                {
+                  order_id: order.id,
+                  gateway_order_id: response.razorpay_order_id || order.gateway_order_id,
+                  gateway_payment_id: response.razorpay_payment_id,
+                  error_code: 'VERIFICATION_FAILED',
+                  error_description: failMsg,
+                  payment_method: 'razorpay_checkout',
+                  user_account_id: userAccountId || undefined,
+                },
+                userAccountId
+              ).catch((e) => console.warn('[ProgramDetailPage] Failure report notice:', e));
             }
           },
           modal: {
@@ -179,9 +208,35 @@ export const ProgramDetailPage: React.FC = () => {
         };
 
         const rzpInstance = new (window as any).Razorpay(options);
-        rzpInstance.on('payment.failed', (resp: any) => {
-          setCheckoutError(resp?.error?.description || 'Payment was declined or failed.');
+        rzpInstance.on('payment.failed', async (resp: any) => {
+          const errDetail = resp?.error || {};
+          const failDesc = errDetail.description || 'Payment was declined or failed.';
+          setCheckoutError(failDesc);
           setCheckoutState('FAILED');
+
+          try {
+            await recordPaymentFailure(
+              {
+                order_id: order.id,
+                gateway_order_id: errDetail.metadata?.order_id || order.gateway_order_id,
+                gateway_payment_id: errDetail.metadata?.payment_id,
+                error_code: errDetail.code,
+                error_description: failDesc,
+                error_source: errDetail.source,
+                error_step: errDetail.step,
+                error_reason: errDetail.reason,
+                payment_method: 'razorpay_checkout',
+                metadata: {
+                  program_id: program.id,
+                  program_name: program.name,
+                },
+                user_account_id: userAccountId || undefined,
+              },
+              userAccountId
+            );
+          } catch (failLogErr) {
+            console.warn('[ProgramDetailPage] Failed to record failure:', failLogErr);
+          }
         });
         rzpInstance.open();
       } else {

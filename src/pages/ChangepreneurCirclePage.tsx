@@ -42,6 +42,7 @@ import {
 import {
   createPaymentOrder,
   verifyPayment,
+  recordPaymentFailure,
   loadRazorpayScript,
   CreateOrderResponse,
   VerifyPaymentResponse
@@ -197,8 +198,21 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
                 }
               }).catch((e) => console.warn('Payment email notice:', e));
             } catch (vErr: any) {
-              setErrorMsg(vErr.message || 'Payment cryptographic signature verification failed.');
+              const errMsg = vErr.message || 'Payment cryptographic signature verification failed.';
+              setErrorMsg(errMsg);
               setModalStep('PAYMENT');
+              recordPaymentFailure(
+                {
+                  order_id: order.id,
+                  gateway_order_id: response.razorpay_order_id || order.gateway_order_id,
+                  gateway_payment_id: response.razorpay_payment_id,
+                  error_code: 'VERIFICATION_FAILED',
+                  error_description: errMsg,
+                  payment_method: 'razorpay_checkout',
+                  user_account_id: order.user_account_id || userAccountId || undefined,
+                },
+                order.user_account_id || userAccountId
+              ).catch((e) => console.warn('Failure logging notice:', e));
             }
           },
           modal: {
@@ -209,9 +223,35 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
         };
 
         const rzp = new (window as any).Razorpay(options);
-        rzp.on('payment.failed', (failResp: any) => {
-          setErrorMsg(failResp?.error?.description || 'Gateway declined payment transaction.');
+        rzp.on('payment.failed', async (failResp: any) => {
+          const errData = failResp?.error || {};
+          const failDesc = errData.description || 'Gateway declined payment transaction.';
+          setErrorMsg(failDesc);
           setModalStep('PAYMENT');
+
+          try {
+            await recordPaymentFailure(
+              {
+                order_id: order.id,
+                gateway_order_id: errData.metadata?.order_id || order.gateway_order_id,
+                gateway_payment_id: errData.metadata?.payment_id,
+                error_code: errData.code,
+                error_description: failDesc,
+                error_source: errData.source,
+                error_step: errData.step,
+                error_reason: errData.reason,
+                payment_method: 'razorpay_checkout',
+                metadata: {
+                  program: 'CCPM100',
+                  fullName: trimmedName,
+                },
+                user_account_id: order.user_account_id || userAccountId || undefined,
+              },
+              order.user_account_id || userAccountId
+            );
+          } catch (failLogErr) {
+            console.warn('Failed to record Razorpay failure:', failLogErr);
+          }
         });
         rzp.open();
       } else {
@@ -335,8 +375,21 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
             setModalStep('SUCCESS');
             confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
           } catch (vErr: any) {
-            setErrorMsg(vErr.message || 'Payment verification failed.');
+            const errMsg = vErr.message || 'Payment verification failed.';
+            setErrorMsg(errMsg);
             setModalStep('PAYMENT');
+            recordPaymentFailure(
+              {
+                order_id: createdOrder.id,
+                gateway_order_id: response.razorpay_order_id || createdOrder.gateway_order_id,
+                gateway_payment_id: response.razorpay_payment_id,
+                error_code: 'VERIFICATION_FAILED',
+                error_description: errMsg,
+                payment_method: 'razorpay_standard',
+                user_account_id: createdOrder.user_account_id || userAccountId || undefined,
+              },
+              createdOrder.user_account_id || userAccountId
+            ).catch((e) => console.warn('Failure logging notice:', e));
           }
         },
         modal: {
@@ -344,6 +397,32 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
         }
       };
       const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', async (failResp: any) => {
+        const errData = failResp?.error || {};
+        const failDesc = errData.description || 'Gateway declined payment.';
+        setErrorMsg(failDesc);
+        setModalStep('PAYMENT');
+
+        try {
+          await recordPaymentFailure(
+            {
+              order_id: createdOrder.id,
+              gateway_order_id: errData.metadata?.order_id || createdOrder.gateway_order_id,
+              gateway_payment_id: errData.metadata?.payment_id,
+              error_code: errData.code,
+              error_description: failDesc,
+              error_source: errData.source,
+              error_step: errData.step,
+              error_reason: errData.reason,
+              payment_method: 'razorpay_standard',
+              user_account_id: createdOrder.user_account_id || userAccountId || undefined,
+            },
+            createdOrder.user_account_id || userAccountId
+          );
+        } catch (failLogErr) {
+          console.warn('Failed to record failure:', failLogErr);
+        }
+      });
       rzp.open();
     } else {
       setErrorMsg('Razorpay Checkout SDK is loading. Please select your payment mode below.');

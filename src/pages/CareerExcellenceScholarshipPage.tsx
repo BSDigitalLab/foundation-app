@@ -36,6 +36,7 @@ import {
 import {
   createPaymentOrder,
   verifyPayment,
+  recordPaymentFailure,
   loadRazorpayScript,
   CreateOrderResponse,
   VerifyPaymentResponse
@@ -174,30 +175,18 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
           handler: async (response: any) => {
             setModalStep('VERIFYING');
             try {
-              let verifyRes: VerifyPaymentResponse;
-              try {
-                verifyRes = await verifyPayment(
-                  {
-                    order_id: order.id,
-                    razorpay_order_id: response.razorpay_order_id || order.gateway_order_id,
-                    razorpay_payment_id: response.razorpay_payment_id,
-                    razorpay_signature: response.razorpay_signature,
-                    payment_method: 'razorpay_checkout',
-                    user_account_id: order.user_account_id || userAccountId || undefined,
-                  },
-                  order.user_account_id || userAccountId
-                );
-              } catch {
-                verifyRes = {
-                  status: 'CONFIRMED',
+              const verifyRes = await verifyPayment(
+                {
                   order_id: order.id,
-                  order_code: order.order_code,
-                  gateway_order_id: order.gateway_order_id,
-                  gateway_payment_id: response.razorpay_payment_id,
-                  amount_paise: 54900,
-                  currency: 'INR',
-                };
-              }
+                  razorpay_order_id: response.razorpay_order_id || order.gateway_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  payment_method: 'razorpay_checkout',
+                  user_account_id: order.user_account_id || userAccountId || undefined,
+                },
+                order.user_account_id || userAccountId
+              );
+
               setFulfillment(verifyRes);
               setModalStep('SUCCESS');
               confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
@@ -224,8 +213,21 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
                 }
               }).catch((e) => console.warn('Payment email notice:', e));
             } catch (vErr: any) {
-              setErrorMsg(vErr.message || 'Payment verification failed.');
+              const errMsg = vErr.message || 'Payment verification failed.';
+              setErrorMsg(errMsg);
               setModalStep('PAYMENT');
+              recordPaymentFailure(
+                {
+                  order_id: order.id,
+                  gateway_order_id: response.razorpay_order_id || order.gateway_order_id,
+                  gateway_payment_id: response.razorpay_payment_id,
+                  error_code: 'VERIFICATION_FAILED',
+                  error_description: errMsg,
+                  payment_method: 'razorpay_checkout',
+                  user_account_id: order.user_account_id || userAccountId || undefined,
+                },
+                order.user_account_id || userAccountId
+              ).catch((e) => console.warn('Failed to record failure:', e));
             }
           },
           modal: {
@@ -236,9 +238,35 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
         };
 
         const rzp = new (window as any).Razorpay(options);
-        rzp.on('payment.failed', (failResp: any) => {
-          setErrorMsg(failResp?.error?.description || 'Gateway declined transaction.');
+        rzp.on('payment.failed', async (failResp: any) => {
+          const errData = failResp?.error || {};
+          const failDesc = errData.description || 'Gateway declined transaction.';
+          setErrorMsg(failDesc);
           setModalStep('PAYMENT');
+
+          try {
+            await recordPaymentFailure(
+              {
+                order_id: order.id,
+                gateway_order_id: errData.metadata?.order_id || order.gateway_order_id,
+                gateway_payment_id: errData.metadata?.payment_id,
+                error_code: errData.code,
+                error_description: failDesc,
+                error_source: errData.source,
+                error_step: errData.step,
+                error_reason: errData.reason,
+                payment_method: 'razorpay_checkout',
+                metadata: {
+                  program: 'CESP100',
+                  fullName: trimmedName,
+                },
+                user_account_id: order.user_account_id || userAccountId || undefined,
+              },
+              order.user_account_id || userAccountId
+            );
+          } catch (failLogErr) {
+            console.warn('Failed to record Razorpay failure:', failLogErr);
+          }
         });
         rzp.open();
       } else {
@@ -279,30 +307,17 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
     const simPaymentId = `pay_cesp_${Date.now()}`;
 
     try {
-      let verifyRes: VerifyPaymentResponse;
-      try {
-        verifyRes = await verifyPayment(
-          {
-            order_id: createdOrder.id,
-            razorpay_order_id: createdOrder.gateway_order_id,
-            razorpay_payment_id: simPaymentId,
-            razorpay_signature: 'simulated_valid_cesp_signature',
-            payment_method: paymentCategory,
-            user_account_id: createdOrder.user_account_id || userAccountId || undefined,
-          },
-          createdOrder.user_account_id || userAccountId
-        );
-      } catch {
-        verifyRes = {
-          status: 'CONFIRMED',
+      const verifyRes = await verifyPayment(
+        {
           order_id: createdOrder.id,
-          order_code: createdOrder.order_code,
-          gateway_order_id: createdOrder.gateway_order_id,
-          gateway_payment_id: simPaymentId,
-          amount_paise: 54900,
-          currency: 'INR',
-        };
-      }
+          razorpay_order_id: createdOrder.gateway_order_id,
+          razorpay_payment_id: simPaymentId,
+          razorpay_signature: 'simulated_test_mode_valid_signature',
+          payment_method: paymentCategory,
+          user_account_id: createdOrder.user_account_id || userAccountId || undefined,
+        },
+        createdOrder.user_account_id || userAccountId
+      );
 
       setFulfillment(verifyRes);
       setModalStep('SUCCESS');

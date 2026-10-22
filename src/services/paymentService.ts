@@ -44,6 +44,60 @@ export interface VerifyPaymentResponse {
   message?: string;
 }
 
+export interface RecordPaymentFailurePayload {
+  order_id: string;
+  gateway_order_id?: string;
+  gateway_payment_id?: string;
+  error_code?: string;
+  error_description?: string;
+  error_source?: string;
+  error_step?: string;
+  error_reason?: string;
+  payment_method?: string;
+  metadata?: Record<string, any>;
+  user_account_id?: string;
+}
+
+export interface RecordPaymentFailureResponse {
+  status: string;
+  order_id: string;
+  order_code?: string;
+  transaction_id?: string;
+  transaction_code?: string;
+  gateway_order_id?: string;
+  gateway_payment_id?: string;
+  amount_paise?: number;
+  error_description?: string;
+  message?: string;
+}
+
+export interface PaymentOrderStatusResponse {
+  status: string;
+  data: {
+    order_id: string;
+    order_code: string;
+    gateway_order_id: string;
+    status: string;
+    amount_paise: number;
+    currency: string;
+    receipt: string;
+    program_id?: string;
+    created_at?: string;
+    updated_at?: string;
+    transactions: Array<{
+      id: string;
+      transaction_code: string;
+      gateway_payment_id: string;
+      status: string;
+      amount_paise: number;
+      payment_method?: string;
+      failure_details?: Record<string, any>;
+      captured_at?: string;
+      created_at?: string;
+    }>;
+  };
+}
+
 export interface PaymentConfigStatus {
   key_id_present: boolean;
   key_secret_present: boolean;
@@ -167,3 +221,80 @@ export const verifyPayment = async (
   }
   return data;
 };
+
+/**
+ * Authoritatively reports and records a payment failure / cancellation event
+ * to the backend platform ledger.
+ */
+export const recordPaymentFailure = async (
+  payload: RecordPaymentFailurePayload,
+  userAccountId?: string | null
+): Promise<RecordPaymentFailureResponse> => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (userAccountId) {
+    headers['X-Customer-User-Id'] = userAccountId;
+  }
+
+  const res = await fetch(`${getApiBase()}/api/v1/payments/record-failure`, {
+    method: 'POST',
+    headers,
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    console.warn('[paymentService] Failed to record payment failure:', data);
+  }
+  return data;
+};
+
+/**
+ * Authoritatively queries payment order lifecycle status and associated transactions.
+ */
+export const fetchPaymentOrderStatus = async (
+  orderId: string,
+  userAccountId?: string | null
+): Promise<PaymentOrderStatusResponse> => {
+  const headers: Record<string, string> = {};
+  if (userAccountId) {
+    headers['X-Customer-User-Id'] = userAccountId;
+  }
+
+  const res = await fetch(`${getApiBase()}/api/v1/payments/orders/${orderId}`, {
+    headers,
+    credentials: 'include',
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail || data.message || 'Failed to fetch payment order status.');
+  }
+  return data;
+};
+
+/**
+ * Fetches all transactions for the authenticated customer user.
+ */
+export const fetchMyPaymentTransactions = async (
+  userAccountId?: string | null
+): Promise<any> => {
+  const headers: Record<string, string> = {};
+  if (userAccountId) {
+    headers['X-Customer-User-Id'] = userAccountId;
+  }
+
+  const res = await fetch(`${getApiBase()}/api/v1/payments/my-transactions`, {
+    headers,
+    credentials: 'include',
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail || data.message || 'Failed to fetch transactions.');
+  }
+  return data;
+};
+
