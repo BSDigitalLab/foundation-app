@@ -21,6 +21,8 @@ const VolunteerPage = lazy(() => import('./pages/VolunteerPage').then((m) => ({ 
 const PartnerPage = lazy(() => import('./pages/PartnerPage').then((m) => ({ default: m.PartnerPage })));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage').then((m) => ({ default: m.PrivacyPolicyPage })));
 const TermsConditionsPage = lazy(() => import('./pages/TermsConditionsPage').then((m) => ({ default: m.TermsConditionsPage })));
+const UnsubscribePage = lazy(() => import('./pages/UnsubscribePage').then((m) => ({ default: m.UnsubscribePage })));
+const DeleteAccountPage = lazy(() => import('./pages/DeleteAccountPage').then((m) => ({ default: m.DeleteAccountPage })));
 
 // Scroll To Top on Route Change
 const ScrollToTop: React.FC = () => {
@@ -73,6 +75,8 @@ export const App: React.FC = () => {
               <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
               <Route path="/terms-and-conditions" element={<TermsConditionsPage />} />
               <Route path="/terms" element={<TermsConditionsPage />} />
+              <Route path="/unsubscribe" element={<UnsubscribePage />} />
+              <Route path="/delete-account" element={<DeleteAccountPage />} />
               <Route path="*" element={<HomePage />} />
             </Routes>
           </Suspense>
