@@ -1,0 +1,194 @@
+{
+  "timestamp_utc": "2026-10-25T16:11:40.337815+00:00",
+  "database_identity": {
+    "current_database": "postgres",
+    "current_user": "postgres",
+    "server_version": "PostgreSQL 17.6 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit",
+    "server_addr": "2406:da14:1d4f:7401:354a:a577:b0:456f",
+    "server_port": 5432
+  },
+  "pre_migration": {
+    "constraints": [
+      {
+        "constraint_name": "account_deletion_audit_logs_pkey",
+        "constraint_type": "PRIMARY KEY"
+      },
+      {
+        "constraint_name": "account_deletion_audit_logs_request_id_fkey",
+        "constraint_type": "FOREIGN KEY"
+      },
+      {
+        "constraint_name": "43251_58176_1_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_2_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_3_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_4_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_5_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_6_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_7_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_8_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_10_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_11_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_12_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_15_not_null",
+        "constraint_type": "CHECK"
+      }
+    ],
+    "indexes": [
+      {
+        "indexname": "account_deletion_audit_logs_pkey",
+        "indexdef": "CREATE UNIQUE INDEX account_deletion_audit_logs_pkey ON identity.account_deletion_audit_logs USING btree (id)"
+      },
+      {
+        "indexname": "idx_del_audit_request",
+        "indexdef": "CREATE INDEX idx_del_audit_request ON identity.account_deletion_audit_logs USING btree (request_id)"
+      },
+      {
+        "indexname": "idx_del_audit_actor",
+        "indexdef": "CREATE INDEX idx_del_audit_actor ON identity.account_deletion_audit_logs USING btree (actor_id)"
+      },
+      {
+        "indexname": "idx_del_audit_created",
+        "indexdef": "CREATE INDEX idx_del_audit_created ON identity.account_deletion_audit_logs USING btree (created_at)"
+      }
+    ],
+    "audit_logs_count": 5,
+    "deletion_requests_count": 2
+  },
+  "migration_execution": {
+    "status": "APPLIED_SUCCESS",
+    "artifact_path": "C:\\workspace\\apps\\Foundation App\\migrations\\008_account_deletion_audit_predecessor_uniqueness.sql",
+    "timestamp": "2026-10-25T16:11:43.746152+00:00"
+  },
+  "post_migration": {
+    "constraints": [
+      {
+        "constraint_name": "account_deletion_audit_logs_pkey",
+        "constraint_type": "PRIMARY KEY"
+      },
+      {
+        "constraint_name": "account_deletion_audit_logs_request_id_fkey",
+        "constraint_type": "FOREIGN KEY"
+      },
+      {
+        "constraint_name": "uq_account_deletion_audit_prev_hash",
+        "constraint_type": "UNIQUE"
+      },
+      {
+        "constraint_name": "43251_58176_1_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_2_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_3_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_4_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_5_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_6_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_7_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_8_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_10_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_11_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_12_not_null",
+        "constraint_type": "CHECK"
+      },
+      {
+        "constraint_name": "43251_58176_15_not_null",
+        "constraint_type": "CHECK"
+      }
+    ],
+    "indexes": [
+      {
+        "indexname": "account_deletion_audit_logs_pkey",
+        "indexdef": "CREATE UNIQUE INDEX account_deletion_audit_logs_pkey ON identity.account_deletion_audit_logs USING btree (id)"
+      },
+      {
+        "indexname": "idx_del_audit_request",
+        "indexdef": "CREATE INDEX idx_del_audit_request ON identity.account_deletion_audit_logs USING btree (request_id)"
+      },
+      {
+        "indexname": "idx_del_audit_actor",
+        "indexdef": "CREATE INDEX idx_del_audit_actor ON identity.account_deletion_audit_logs USING btree (actor_id)"
+      },
+      {
+        "indexname": "idx_del_audit_created",
+        "indexdef": "CREATE INDEX idx_del_audit_created ON identity.account_deletion_audit_logs USING btree (created_at)"
+      },
+      {
+        "indexname": "uq_account_deletion_audit_prev_hash",
+        "indexdef": "CREATE UNIQUE INDEX uq_account_deletion_audit_prev_hash ON identity.account_deletion_audit_logs USING btree (request_id, prev_log_hash_sha256)"
+      }
+    ],
+    "constraint_columns": [
+      {
+        "column_name": "request_id",
+        "ordinal_position": 1
+      },
+      {
+        "column_name": "prev_log_hash_sha256",
+        "ordinal_position": 2
+      }
+    ],
+    "audit_logs_count": 5,
+    "deletion_requests_count": 2,
+    "constraint_active": true
+  }
+}
