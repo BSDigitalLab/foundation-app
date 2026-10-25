@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getPlatformApiBaseUrl } from '../config/apiConfig';
+import { getPlatformApiBaseUrl } from '../config/apiConfig.ts';
 
 export interface CustomerProfile {
   id: string;
@@ -122,6 +122,19 @@ export const useCustomerAuthStore = create<CustomerAuthState>((set, get) => ({
         throw new Error(data.detail || data.message || 'Invalid OTP');
       }
 
+      // Mandatory Access Suspension Guard: Deny login to suspended accounts
+      if (data.status === 'SUSPENDED' || data.customer?.status === 'SUSPENDED') {
+        set({
+          isAuthenticated: false,
+          userAccountId: null,
+          customer: null,
+          isLoading: false,
+          isModalOpen: false,
+          error: 'Account access is suspended. Login denied due to pending administrative review.',
+        });
+        return false;
+      }
+
       set({
         isAuthenticated: true,
         userAccountId: data.user_account_id,
@@ -146,6 +159,18 @@ export const useCustomerAuthStore = create<CustomerAuthState>((set, get) => ({
       });
       if (res.ok) {
         const data = await res.json();
+        
+        // Mandatory Access Suspension Guard: Immediately invalidate suspended sessions
+        if (data.status === 'SUSPENDED' || data.customer?.status === 'SUSPENDED' || data.is_suspended) {
+          set({
+            isAuthenticated: false,
+            userAccountId: null,
+            customer: null,
+            error: 'Account access has been suspended due to an active deletion request or administrative review.',
+          });
+          return;
+        }
+
         set({
           isAuthenticated: true,
           userAccountId: data.user_account_id,
@@ -155,7 +180,7 @@ export const useCustomerAuthStore = create<CustomerAuthState>((set, get) => ({
             phone_number: data.phone_number,
             first_name: data.first_name,
             last_name: data.last_name,
-            status: 'ACTIVE',
+            status: data.status || 'ACTIVE',
           },
         });
       } else {

@@ -16,6 +16,54 @@ import {
   Scale
 } from 'lucide-react';
 
+// Helper to render markdown links [label](url) within text strings
+const renderFormattedText = (text: string): React.ReactNode => {
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  if (!linkRegex.test(text)) {
+    return text;
+  }
+
+  linkRegex.lastIndex = 0;
+  const elements: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = linkRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      elements.push(text.substring(lastIndex, match.index));
+    }
+    const label = match[1];
+    const url = match[2];
+
+    if (url.startsWith('/')) {
+      elements.push(
+        <Link key={match.index} to={url} className="text-emerald-800 underline font-semibold hover:text-emerald-950 transition-colors">
+          {label}
+        </Link>
+      );
+    } else {
+      elements.push(
+        <a
+          key={match.index}
+          href={url}
+          target={url.startsWith('mailto:') ? undefined : '_blank'}
+          rel={url.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
+          className="text-emerald-800 underline font-semibold hover:text-emerald-950 transition-colors"
+        >
+          {label}
+        </a>
+      );
+    }
+    lastIndex = linkRegex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    elements.push(text.substring(lastIndex));
+  }
+
+  return <>{elements}</>;
+};
+
 export const PrivacyPolicyPage: React.FC = () => {
   const data = PRIVACY_POLICY_DATA;
   const [showBackToTop, setShowBackToTop] = useState<boolean>(false);
@@ -41,8 +89,8 @@ export const PrivacyPolicyPage: React.FC = () => {
     <>
       <SEOHead
         title="Privacy Policy | Yuvaparipalan Foundation"
-        description="Official Privacy Policy and Data Governance Standard of Yuvaparipalan Foundation, a Section 8 Not-for-Profit organization."
-        canonicalUrl="https://www.yuvaparipalan.org/privacy-policy"
+        description="Official Privacy Policy and Platform Data Governance Standard of Yuvaparipalan Foundation, a Section 8 Not-for-Profit organization."
+        canonicalUrl="https://yuvaparipalan.org/privacy-policy"
       />
 
       <div className="min-h-screen bg-[#f8faf8] text-slate-900 selection:bg-emerald-500 selection:text-white pb-20 relative overflow-hidden">
@@ -65,7 +113,7 @@ export const PrivacyPolicyPage: React.FC = () => {
               <nav className="flex items-center gap-2 text-xs font-mono text-emerald-900 mb-6">
                 <Link to="/" className="hover:text-emerald-700 transition-colors font-semibold">Home</Link>
                 <ChevronRight className="w-3 h-3 text-slate-400" />
-                <span className="text-slate-500">Legal Centre</span>
+                <Link to="/legal-centre" className="hover:text-emerald-700 transition-colors font-semibold">Legal Centre</Link>
                 <ChevronRight className="w-3 h-3 text-slate-400" />
                 <span className="text-emerald-800 font-bold">{data.title}</span>
               </nav>
@@ -176,7 +224,7 @@ export const PrivacyPolicyPage: React.FC = () => {
                   {section.paragraphs && (
                     <div className="space-y-3 text-sm text-slate-700 leading-relaxed font-normal">
                       {section.paragraphs.map((paragraph, pIdx) => (
-                        <p key={pIdx}>{paragraph}</p>
+                        <p key={pIdx}>{renderFormattedText(paragraph)}</p>
                       ))}
                     </div>
                   )}
@@ -184,7 +232,7 @@ export const PrivacyPolicyPage: React.FC = () => {
                   {/* Callout Box */}
                   {section.callout && (
                     <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-white to-emerald-50/50 border-l-4 border-amber-500 border-y border-r border-amber-300/40 text-xs sm:text-sm text-slate-800 font-medium leading-relaxed shadow-sm">
-                      {section.callout}
+                      {renderFormattedText(section.callout)}
                     </div>
                   )}
 
@@ -199,18 +247,21 @@ export const PrivacyPolicyPage: React.FC = () => {
                             </h3>
                           )}
                           {sub.paragraphs && sub.paragraphs.map((sp, spIdx) => (
-                            <p key={spIdx} className="text-sm text-slate-700 leading-relaxed font-normal">{sp}</p>
+                            <p key={spIdx} className="text-sm text-slate-700 leading-relaxed font-normal">{renderFormattedText(sp)}</p>
                           ))}
                           {sub.bullets && (
                             <ul className="space-y-2 pt-1">
                               {sub.bullets.map((bullet, bIdx) => (
                                 <li key={bIdx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700 leading-relaxed">
                                   <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
-                                  <span>{bullet}</span>
+                                  <span>{renderFormattedText(bullet)}</span>
                                 </li>
                               ))}
                             </ul>
                           )}
+                          {sub.paragraphsAfter && sub.paragraphsAfter.map((sp, spIdx) => (
+                            <p key={spIdx} className="text-sm text-slate-700 leading-relaxed font-normal pt-1">{renderFormattedText(sp)}</p>
+                          ))}
                         </div>
                       ))}
                     </div>
@@ -222,10 +273,19 @@ export const PrivacyPolicyPage: React.FC = () => {
                       {section.bullets.map((bullet, bIdx) => (
                         <li key={bIdx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700 leading-relaxed">
                           <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
-                          <span>{bullet}</span>
+                          <span>{renderFormattedText(bullet)}</span>
                         </li>
                       ))}
                     </ul>
+                  )}
+
+                  {/* Paragraphs After Bullets */}
+                  {section.paragraphsAfter && (
+                    <div className="space-y-3 text-sm text-slate-700 leading-relaxed font-normal pt-2">
+                      {section.paragraphsAfter.map((paragraph, pIdx) => (
+                        <p key={pIdx}>{renderFormattedText(paragraph)}</p>
+                      ))}
+                    </div>
                   )}
 
                   {/* Contact Info Detail for Section 12 */}
@@ -234,13 +294,21 @@ export const PrivacyPolicyPage: React.FC = () => {
                       <p className="font-extrabold text-slate-950">{data.orgDetails.name}</p>
                       <p className="text-slate-600 font-medium">{data.orgDetails.type}</p>
                       <p className="text-amber-800 font-bold">CIN: {data.orgDetails.cin} | DARPAN ID: {data.orgDetails.darpanId}</p>
-                      <p className="text-slate-700">{data.orgDetails.address}</p>
+                      <p className="text-slate-700">Address: {data.orgDetails.address}</p>
                       <p className="pt-1">
-                        Email:{' '}
+                        Privacy and Data Protection Email:{' '}
                         <a href={`mailto:${data.orgDetails.email}`} className="text-emerald-800 underline hover:text-emerald-950 font-bold">
                           {data.orgDetails.email}
                         </a>
                       </p>
+                      {data.orgDetails.website && (
+                        <p>
+                          Website:{' '}
+                          <a href={data.orgDetails.website} target="_blank" rel="noopener noreferrer" className="text-emerald-800 underline hover:text-emerald-950 font-bold">
+                            {data.orgDetails.website}
+                          </a>
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -253,12 +321,20 @@ export const PrivacyPolicyPage: React.FC = () => {
                 <h3 className="font-heading font-extrabold text-base text-slate-950">Terms & Conditions Agreement</h3>
                 <p className="text-xs text-slate-600 mt-1">Review our governance terms, volunteer code of conduct, and programme guidelines.</p>
               </div>
-              <Link
-                to="/terms-and-conditions"
-                className="px-6 py-3 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-mono font-bold tracking-wider uppercase transition-all shadow-md shrink-0 hover:scale-105"
-              >
-                View Terms & Conditions
-              </Link>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  to="/legal-centre"
+                  className="px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-mono font-bold tracking-wider uppercase transition-all shadow-md shrink-0 hover:scale-105"
+                >
+                  Legal Centre Hub
+                </Link>
+                <Link
+                  to="/terms-and-conditions"
+                  className="px-5 py-3 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-mono font-bold tracking-wider uppercase transition-all shadow-md shrink-0 hover:scale-105"
+                >
+                  View Terms & Conditions
+                </Link>
+              </div>
             </div>
           </main>
         </section>

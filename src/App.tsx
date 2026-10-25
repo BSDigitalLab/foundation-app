@@ -21,8 +21,13 @@ const VolunteerPage = lazy(() => import('./pages/VolunteerPage').then((m) => ({ 
 const PartnerPage = lazy(() => import('./pages/PartnerPage').then((m) => ({ default: m.PartnerPage })));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage').then((m) => ({ default: m.PrivacyPolicyPage })));
 const TermsConditionsPage = lazy(() => import('./pages/TermsConditionsPage').then((m) => ({ default: m.TermsConditionsPage })));
+const LegalCentrePage = lazy(() => import('./pages/LegalCentrePage').then((m) => ({ default: m.LegalCentrePage })));
+const ChildSafeguardingPage = lazy(() => import('./pages/ChildSafeguardingPage').then((m) => ({ default: m.ChildSafeguardingPage })));
+const POSHPolicyPage = lazy(() => import('./pages/POSHPolicyPage').then((m) => ({ default: m.POSHPolicyPage })));
+const AcceptableUsePage = lazy(() => import('./pages/AcceptableUsePage').then((m) => ({ default: m.AcceptableUsePage })));
 const UnsubscribePage = lazy(() => import('./pages/UnsubscribePage').then((m) => ({ default: m.UnsubscribePage })));
 const DeleteAccountPage = lazy(() => import('./pages/DeleteAccountPage').then((m) => ({ default: m.DeleteAccountPage })));
+const AdminAccountDeletionPage = lazy(() => import('./pages/AdminAccountDeletionPage').then((m) => ({ default: m.AdminAccountDeletionPage })));
 
 // Scroll To Top on Route Change
 const ScrollToTop: React.FC = () => {
@@ -43,6 +48,23 @@ const PageLoader: React.FC = () => (
   </div>
 );
 
+// App Layout Controller: Hides general Navbar & Footer on standalone routes (/delete-account and /admin/*)
+const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { pathname } = useLocation();
+  const isStandalone = pathname === '/delete-account' || pathname.startsWith('/admin');
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white font-sans">
+      {!isStandalone && <Navbar />}
+      <CustomerAuthModal />
+      <div className="flex-grow">
+        {children}
+      </div>
+      {!isStandalone && <Footer />}
+    </div>
+  );
+};
+
 export const App: React.FC = () => {
   const fetchCurrentCustomer = useCustomerAuthStore((s) => s.fetchCurrentCustomer);
 
@@ -53,38 +75,45 @@ export const App: React.FC = () => {
   return (
     <Router>
       <ScrollToTop />
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white font-sans">
-        <Navbar />
-        <CustomerAuthModal />
-        <div className="flex-grow">
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/programs" element={<ProgramsPage />} />
-              <Route path="/programs/changepreneur-circle" element={<ChangepreneurCirclePage />} />
-              <Route path="/programs/career-excellence-scholarship-program" element={<CareerExcellenceScholarshipPage />} />
-              <Route path="/programs/cesp" element={<CareerExcellenceScholarshipPage />} />
-              <Route path="/programs/:slug" element={<ProgramDetailPage />} />
-              <Route path="/impact" element={<ImpactPage />} />
-              <Route path="/leadership" element={<LeadershipPage />} />
-              <Route path="/gallery" element={<GalleryPage />} />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/volunteer" element={<VolunteerPage />} />
-              <Route path="/partner" element={<PartnerPage />} />
-              <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-              <Route path="/terms-and-conditions" element={<TermsConditionsPage />} />
-              <Route path="/terms" element={<TermsConditionsPage />} />
-              <Route path="/unsubscribe" element={<UnsubscribePage />} />
-              <Route path="/delete-account" element={<DeleteAccountPage />} />
-              <Route path="*" element={<HomePage />} />
-            </Routes>
-          </Suspense>
-        </div>
-        <Footer />
-      </div>
+      <AppLayout>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/programs" element={<ProgramsPage />} />
+            <Route path="/programs/changepreneur-circle" element={<ChangepreneurCirclePage />} />
+            <Route path="/programs/career-excellence-scholarship-program" element={<CareerExcellenceScholarshipPage />} />
+            <Route path="/programs/cesp" element={<CareerExcellenceScholarshipPage />} />
+            <Route path="/programs/:slug" element={<ProgramDetailPage />} />
+            <Route path="/impact" element={<ImpactPage />} />
+            <Route path="/leadership" element={<LeadershipPage />} />
+            <Route path="/gallery" element={<GalleryPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/volunteer" element={<VolunteerPage />} />
+            <Route path="/partner" element={<PartnerPage />} />
+            <Route path="/legal-centre" element={<LegalCentrePage />} />
+            <Route path="/legal" element={<LegalCentrePage />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+            <Route path="/terms-and-conditions" element={<TermsConditionsPage />} />
+            <Route path="/terms" element={<TermsConditionsPage />} />
+            <Route path="/child-safeguarding" element={<ChildSafeguardingPage />} />
+            <Route path="/posh" element={<POSHPolicyPage />} />
+            <Route path="/acceptable-use" element={<AcceptableUsePage />} />
+            <Route path="/unsubscribe" element={<UnsubscribePage />} />
+            <Route path="/delete-account" element={<DeleteAccountPage />} />
+            
+            {/* Identity & Access -> Access & Permissions -> Account Deletion Requests Admin Queue */}
+            <Route path="/admin/access/account-deletion-requests" element={<AdminAccountDeletionPage />} />
+            <Route path="/admin/identity-access/deletion-requests" element={<AdminAccountDeletionPage />} />
+            <Route path="/admin/account-deletion-requests" element={<AdminAccountDeletionPage />} />
+
+            <Route path="*" element={<HomePage />} />
+          </Routes>
+        </Suspense>
+      </AppLayout>
     </Router>
   );
 };
 
 export default App;
+

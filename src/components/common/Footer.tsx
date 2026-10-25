@@ -148,10 +148,17 @@ export const Footer: React.FC = () => {
       <div className="pt-5 sm:pt-6 border-t border-emerald-900/60 w-full max-w-full px-6 sm:px-12 lg:px-16 relative z-10">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-emerald-300/70">
           <p>© {new Date().getFullYear()} Yuvaparipalan Foundation. All rights reserved. Non-profit Section 8 Organization.</p>
-          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-5 text-emerald-300/80">
             <span className="flex items-center gap-1 text-emerald-200">
               Build with <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-400" /> by Branding Sparrow
             </span>
+            <span className="text-emerald-800/80">|</span>
+            <Link 
+              to="/legal-centre" 
+              className="hover:text-white transition-colors font-semibold text-emerald-200"
+            >
+              Legal Centre
+            </Link>
             <span className="text-emerald-800/80">|</span>
             <Link 
               to="/privacy-policy" 
@@ -165,6 +172,27 @@ export const Footer: React.FC = () => {
               className="hover:text-white transition-colors"
             >
               Terms & Conditions
+            </Link>
+            <span className="text-emerald-800/80">|</span>
+            <Link 
+              to="/child-safeguarding" 
+              className="hover:text-white transition-colors"
+            >
+              Child Safeguarding
+            </Link>
+            <span className="text-emerald-800/80">|</span>
+            <Link 
+              to="/posh" 
+              className="hover:text-white transition-colors"
+            >
+              POSH Policy
+            </Link>
+            <span className="text-emerald-800/80">|</span>
+            <Link 
+              to="/delete-account" 
+              className="hover:text-rose-400 transition-colors"
+            >
+              Delete Account
             </Link>
           </div>
         </div>
