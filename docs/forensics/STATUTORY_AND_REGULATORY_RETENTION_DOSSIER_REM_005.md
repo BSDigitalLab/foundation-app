@@ -51,26 +51,37 @@ The following four questions are preserved verbatim from the authoritative Platf
    Confirm whether cryptographic SHA-256 verification hashes of KYC documents satisfy 
    PMLA 2002 Rule 9(4) record-keeping obligations once the underlying biometric/identity 
    document blobs are shredded from S3 buckets.
+   [CRITICAL COUNSEL DIRECTIVE: Do NOT assume a SHA-256 verification hash can lawfully replace 
+   the original document for statutory record-keeping. Written counsel decision required.]
 
 2. Third-Party Messaging Processor Erasure:
    Confirm whether maintaining local suppression hashes without transmitting cleartext 
    phone numbers to external SMS vendors (MSG91) satisfies Section 8(7) / SPDI Rule 5 
    duty to notify downstream processors.
+   [CRITICAL COUNSEL DIRECTIVE: Obtain a binding written decision on downstream processor erasure 
+   notification obligations versus the proposed suppression-hash architecture.]
 
 3. Pseudonymisation Defense under Companies Act:
    Ratify that replacing party names with surrogate transaction references (txn_party_<hash>) 
    in finance.transactions maintains complete evidential admissibility under Section 128 
    of the Companies Act and Section 65B of the Indian Evidence Act.
+   [CRITICAL COUNSEL DIRECTIVE: Obtain explicit approval for surrogate party identifiers and 
+   the specific evidential records required to preserve accounting integrity.]
 
 4. Interim SPDI vs. DPDP Enforcement:
    Confirm that adhering to SPDI Rules 2011 while proactively implementing DPDP Act 2023 
    architectural standards provides total legal defense during the transitional period 
    before MeitY commences DPDP Sections 2–44.
+   [CRITICAL COUNSEL DIRECTIVE: Counsel must independently verify applicable commencement 
+   notifications and transitional obligations rather than relying on a presumed commencement date.]
 ```
 
 ---
 
-## 3. Data Categories & Proposed Lifecycle Behavior
+## 3. Data Categories & Proposed Lifecycle Behavior (PROPOSALS ONLY — NOT FINAL POLICY)
+
+> [!WARNING]
+> The lifecycle actions below (DC-01 through DC-07) represent **technical proposals only**. They do not constitute final platform policy and must not be implemented as binding operational rules until formal written Legal Counsel ratification is received.
 
 | Category ID | Data Category & Scope | Applicable Database Tables & Stores | Current Implementation Proposal | Proposed Operational Lifecycle Action | Statutory Citation (Pending Verification) |
 | :---: | :--- | :--- | :--- | :--- | :--- |

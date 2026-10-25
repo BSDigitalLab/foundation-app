@@ -27,10 +27,11 @@ Establish an external, off-site, immutable write-once-read-many (WORM) storage a
 | :--- | :--- | :--- | :---: |
 | **Storage Technology** | AWS S3 or MinIO S3-Compatible Storage with Object Lock enabled | `aws s3api get-object-lock-configuration --bucket <bucket>` | Required |
 | **Immutability Mode** | **Compliance Mode** (Root account cannot bypass retention) | S3 Object Lock Default Retention Mode == `COMPLIANCE` | Required |
-| **Default Retention Period** | **8 Years (2920 Days)** matching statutory books retention schedule | Object Lock Default Retention Days == `2920` | Required |
+| **Default Retention Period** | **Legal Counsel Financial-Year Retention Model** (Spans from transaction date to March 31 FY close + 8 subsequent financial years; strictly disclaiming static 2,920 calendar days) | Object Lock Retention Days approved by Legal Counsel & Financial Compliance | Required |
 | **IAM Access Policy** | Restrictive write-only policy; zero `s3:DeleteObject`, `s3:DeleteObjectVersion`, or `s3:PutObjectRetention` | IAM Role Policy JSON audit | Required |
-| **Negative Immutability Test** | Attempt explicit deletion of test audit object using administrative credentials; must fail with `AccessDenied` / `ObjectLockError` | Shell test script output asserting failure code 403 / AccessDenied | Required |
+| **Negative Immutability Test** | Attempt explicit deletion or shortening of retention of test audit object using administrative credentials; must fail with `AccessDenied` / `ObjectLockError` | Shell test script output asserting failure code 403 / AccessDenied | Required |
 | **Cryptographic Re-Verification** | Download archived audit payload from S3 and re-execute `PrivacyLifecycleOrchestrator.verify_audit_chain` against local database tip | Script assertion matching local SHA-256 hash to S3 object ETag/digest | Required |
+| **Recovery Procedure Verification** | Independent test verifying archive retrieval and integrity verification under the platform disaster-recovery procedure | Documented retrieval and verification execution record | Required |
 
 ---
 
@@ -40,15 +41,18 @@ Establish an external, off-site, immutable write-once-read-many (WORM) storage a
 Execute a documented, non-destructive disaster recovery (DR) simulation on an isolated staging clone to prove that Point-in-Time Recovery (PITR) does not re-activate deleted accounts, resurrect purged credentials, or break the cryptographic audit chain.
 
 ### B. Rehearsal Execution Plan
+> [!IMPORTANT]
+> **RECOVERY CERTIFICATION STANDARD:**  
+> A successful database restore alone is **strictly insufficient** to certify Gate G.11. The rehearsal must prove full recovery of the operational state, including verification of tombstone immutability, non-resurrection of deleted accounts/credentials, isolation of `yp_platform_dr_target` from production and canonical testing databases, and 100% cryptographic audit chain continuity.
 
 | Rehearsal Phase | Step & Operational Action | Target Verification Assertion | Gate Status |
 | :--- | :--- | :--- | :---: |
-| **Phase 1: Pre-Rehearsal Baseline** | Snapshot staging database state (`identity.account_deletion_requests`, `identity.account_deletion_audit_logs`). | Record baseline row count and latest tip SHA-256 hash. | Required |
-| **Phase 2: Event Injection** | Execute intake and approval of a test account deletion request. | Verify account is `SUSPENDED` and audit records are appended. | Required |
-| **Phase 3: Point-in-Time Restoration** | Restore database backup to an isolated staging target database instance (`yp_platform_dr_target`). | Confirm restoration succeeds with zero data corruption. | Required |
-| **Phase 4: Tombstone Validation** | Inspect restored state of test account. | Verify that credentials remain purged, status remains `SUSPENDED`, and no deleted data is resurrected. | Required |
-| **Phase 5: Audit Chain Re-Verification** | Execute `verify_audit_chain` across restored `identity.account_deletion_audit_logs`. | Assert 100% hash chain integrity (`CHAIN_VALID`) with 0 breaks. | Required |
-| **Phase 6: Autonomous Cleanup** | Drop temporary DR target database instance. | Zero lingering test records or orphan databases. | Required |
+| **Phase 1: Target Isolation & Baseline** | Verify that `yp_platform_dr_target` is strictly isolated (zero network links to production or canonical testing DB `plbdefqydtqohjgauwqp`). Snapshot baseline schema and tip hash. | Pre-drill isolation certificate, baseline row counts, and tip SHA-256 hash recorded. | Required |
+| **Phase 2: Synthetic Event Injection** | Execute intake and approval of a documented synthetic deletion fixture on the staging master. | Verify test account is `SUSPENDED` and audit records are appended. | Required |
+| **Phase 3: Point-in-Time Restoration** | Restore backup to the isolated target `yp_platform_dr_target`. | Restoration completes with zero schema mutation or data corruption. | Required |
+| **Phase 4: Tombstone & Non-Resurrection** | Inspect restored state of test account and prior purged accounts. | Verify credentials remain purged, status remains `SUSPENDED`, and **zero deleted data is resurrected**. | Required |
+| **Phase 5: Audit Chain Re-Verification** | Execute `verify_audit_chain` across restored `identity.account_deletion_audit_logs`. | Assert 100% hash chain integrity (`CHAIN_VALID`) with 0 breaks or missing predecessors. | Required |
+| **Phase 6: Cleanup & Forensic Sign-Off** | Drop temporary DR target database instance and inspect staging master. | Zero lingering test records or orphan databases; signed rehearsal log published. | Required |
 
 ---
 
