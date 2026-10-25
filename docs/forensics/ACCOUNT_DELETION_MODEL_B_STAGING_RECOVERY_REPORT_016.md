@@ -6,9 +6,10 @@
 **Parent Directive:** `YPF-ACCOUNT-DELETION-MODEL-B-STAGING-ACCEPTANCE-015`  
 **Release Candidate Baseline:** `95e3d85f4daaf58517d11d2fe51620cf2c7ffae6`  
 **Classification:** Critical Platform Governance, Security, Identity & Access, Statutory Compliance  
-**Authoritative Timestamp:** 2026-10-25T10:48:00Z (2026-10-25 16:18:00 IST)  
+**Authoritative Timestamp:** 2026-10-25T11:15:00Z (2026-10-25 16:45:00 IST)  
 **Execution Agent:** Antigravity Advanced Agentic Pair  
-**Branch Tracking:** `origin/dev` (`95e3d85`), `origin/testing` (`95e3d85`), `origin/main` (`a8b1492`)  
+**Branch Tracking:** `origin/dev` (`60e7f06`), `origin/testing` (`95e3d85`), `origin/main` (`a8b1492`)  
+**Release Candidate Baseline:** `95e3d85f4daaf58517d11d2fe51620cf2c7ffae6`  
 **Core Implementation Status:** **`COMPLETE (85/85 TESTS PASS, CLEAN BUILD, 0 LINT ERRORS)`**  
 **Staging Operational Status:** **`BLOCKED (REMOTE DATABASE COMPUTE PAUSED — OWNER REMEDIATION PENDING)`**  
 **Production Release Status:** **`HELD / PENDING (NO GOVERNING BOARD WRITTEN AUTHORIZATION)`**
@@ -39,7 +40,8 @@ Under **DIRECTIVE 016**, the Antigravity Advanced Agentic Pair was authorized to
 * **Canonical API Base:** `https://pugqxafvjjvnwojijrha.supabase.co`
 * **Direct Database Host:** `db.pugqxafvjjvnwojijrha.supabase.co`
 * **Shared Pooler Host:** `aws-0-ap-northeast-1.pooler.supabase.com`
-* **Diagnostic Execution Timestamp:** `2026-10-25T10:44:45.230782Z` (Live System Probes)
+* **Diagnostic Execution Initial Timestamp:** `2026-10-25T10:44:45.230782Z` (Live System Probes)
+* **Reconfirmation Execution Timestamp:** `2026-10-25T11:12:42.515538Z` (Reconfirmed DNS Failure & Paused Compute State)
 
 ### 2.2 Empirical Network & DNS Probes
 
@@ -370,9 +372,9 @@ Direct inspection of local and remote tracking branches (`BSDigitalLab/foundatio
 
 | Branch Reference | Commit SHA | Status | Synchronized Commit Subject |
 | :--- | :--- | :---: | :--- |
-| **`refs/heads/dev`** | `95e3d85f4daaf58517d11d2fe51620cf2c7ffae6` | **VERIFIED** | `feat(deletion-model-b): complete core implementation...` |
-| **`refs/heads/testing`** | `95e3d85f4daaf58517d11d2fe51620cf2c7ffae6` | **VERIFIED** | Matches `origin/dev` release candidate commit 1:1 |
-| **`refs/heads/main`** | `a8b149217cae4a5e3bcda103962af77c9486d484` | **HELD** | `feat(privacy): add unsubscribe and account deletion pages` |
+| **`refs/heads/dev`** | `60e7f06f6dbd3e89a5a577019104465e0a7bb174` | **ACTIVE** | `docs(deletion-model-b): forensic staging recovery, diagnostics & gate closure report (DIRECTIVE-016)` |
+| **`refs/heads/testing`** | `95e3d85f4daaf58517d11d2fe51620cf2c7ffae6` | **PRESERVED** | Release Candidate Baseline (`feat(deletion-model-b): complete core implementation...`) |
+| **`refs/heads/main`** | `a8b149217cae4a5e3bcda103962af77c9486d484` | **HELD** | Stable production baseline (`feat(privacy): add unsubscribe and account deletion pages`) |
 | **`HEAD`** | `a8b149217cae4a5e3bcda103962af77c9486d484` | **HELD** | Default remote tracking points to production baseline `main` |
 
 ### 10.2 Production Release Authorization
