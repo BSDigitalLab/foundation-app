@@ -80,6 +80,7 @@ export const Footer: React.FC = () => {
               <li><Link to="/contact" className="hover:text-white transition-colors">Contact Headquarters</Link></li>
               <li><Link to="/volunteer" className="hover:text-white transition-colors">Volunteer Registration</Link></li>
               <li><Link to="/partner" className="hover:text-white transition-colors">CSR Partner Application</Link></li>
+              <li><Link to="/legal-centre" className="hover:text-white transition-colors">Legal Center</Link></li>
             </ul>
           </div>
 

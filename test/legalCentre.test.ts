@@ -1,5 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { LEGAL_CENTRE_DATA } from '../src/data/legalCentreData.ts';
 import { PRIVACY_POLICY_DATA } from '../src/data/privacyPolicyData.ts';
 import { TERMS_CONDITIONS_DATA } from '../src/data/termsConditionsData.ts';
@@ -279,6 +282,143 @@ describe('Legal Centre & Platform Governance Architecture Suite', () => {
         safeguardingStr.includes('bijusivanand@gmail.com'),
         'Child safeguarding must cite bijusivanand@gmail.com for committee oversight'
       );
+    });
+  });
+
+  describe('6. Footer Navigation & Quick Links Verification', () => {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const footerPath = path.resolve(__dirname, '../src/components/common/Footer.tsx');
+    const footerContent = fs.readFileSync(footerPath, 'utf8');
+
+    it('verifies Quick Links includes Legal Center link pointing to /legal-centre', () => {
+      assert.ok(
+        footerContent.includes('to="/legal-centre"'),
+        'Footer must contain link to /legal-centre'
+      );
+      assert.ok(
+        footerContent.includes('Legal Center') || footerContent.includes('Legal Centre'),
+        'Footer Quick Links must include Legal Center'
+      );
+    });
+
+    it('preserves Privacy Policy and Terms & Conditions links on footer bottom bar', () => {
+      assert.ok(
+        footerContent.includes('to="/privacy-policy"'),
+        'Footer must preserve Privacy Policy link'
+      );
+      assert.ok(
+        footerContent.includes('Privacy Policy'),
+        'Footer must display Privacy Policy text'
+      );
+      assert.ok(
+        footerContent.includes('to="/terms-and-conditions"'),
+        'Footer must preserve Terms & Conditions link'
+      );
+      assert.ok(
+        footerContent.includes('Terms & Conditions'),
+        'Footer must display Terms & Conditions text'
+      );
+    });
+
+    it('verifies additional legal links in footer bottom bar', () => {
+      assert.ok(footerContent.includes('to="/child-safeguarding"'), 'Footer must link to child-safeguarding');
+      assert.ok(footerContent.includes('to="/posh"'), 'Footer must link to posh');
+      assert.ok(footerContent.includes('to="/delete-account"'), 'Footer must link to delete-account');
+    });
+  });
+
+  describe('7. App Route Registry & Alias Resolution', () => {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const appPath = path.resolve(__dirname, '../src/App.tsx');
+    const appContent = fs.readFileSync(appPath, 'utf8');
+
+    it('verifies all canonical policy routes and aliases exist in App.tsx', () => {
+      const REQUIRED_APP_ROUTES = [
+        'path="/legal-centre"',
+        'path="/legal"',
+        'path="/privacy-policy"',
+        'path="/terms-and-conditions"',
+        'path="/terms"',
+        'path="/child-safeguarding"',
+        'path="/posh"',
+        'path="/acceptable-use"',
+        'path="/delete-account"',
+      ];
+
+      for (const route of REQUIRED_APP_ROUTES) {
+        assert.ok(
+          appContent.includes(route),
+          `App.tsx must register route: ${route}`
+        );
+      }
+    });
+
+    it('verifies lazy imports for all legal and policy pages', () => {
+      const REQUIRED_PAGE_IMPORTS = [
+        'LegalCentrePage',
+        'PrivacyPolicyPage',
+        'TermsConditionsPage',
+        'ChildSafeguardingPage',
+        'POSHPolicyPage',
+        'AcceptableUsePage',
+        'DeleteAccountPage',
+      ];
+
+      for (const page of REQUIRED_PAGE_IMPORTS) {
+        assert.ok(
+          appContent.includes(page),
+          `App.tsx must import page component: ${page}`
+        );
+      }
+    });
+  });
+
+  describe('8. Policy Page Preservation & Sub-policy Section Mapping', () => {
+    it('verifies Security and Data Protection Statement exists as Section 06 in Privacy Policy', () => {
+      const securitySec = PRIVACY_POLICY_DATA.sections.find((s) => s.id === 'data-security');
+      assert.ok(securitySec, 'Privacy Policy must contain data-security section');
+      assert.strictEqual(securitySec.number, '06', 'Security section must be numbered 06');
+      assert.ok(securitySec.paragraphs && securitySec.paragraphs.length > 0, 'Security section must have content');
+      assert.ok(
+        JSON.stringify(securitySec).includes('encryption') || JSON.stringify(securitySec).includes('safeguard'),
+        'Security section must detail administrative and technical safeguards'
+      );
+    });
+
+    it('verifies Cookie Policy exists as Section 08 in Privacy Policy without unverified tracking claims', () => {
+      const cookieSec = PRIVACY_POLICY_DATA.sections.find((s) => s.id === 'cookies-and-website-technologies');
+      assert.ok(cookieSec, 'Privacy Policy must contain cookies-and-website-technologies section');
+      assert.strictEqual(cookieSec.number, '08', 'Cookies section must be numbered 08');
+      const text = JSON.stringify(cookieSec);
+      assert.ok(text.toLowerCase().includes('cookies'), 'Cookies section must discuss session and technical storage');
+      assert.ok(!text.includes('Facebook Pixel') && !text.includes('TikTok Pixel'), 'Must not claim third-party tracking pixels that are not implemented');
+    });
+
+    it('verifies all policy pages exist on filesystem and maintain uniform layout structure', () => {
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      const pagesDir = path.resolve(__dirname, '../src/pages');
+
+      const expectedFiles = [
+        'LegalCentrePage.tsx',
+        'PrivacyPolicyPage.tsx',
+        'TermsConditionsPage.tsx',
+        'ChildSafeguardingPage.tsx',
+        'POSHPolicyPage.tsx',
+        'AcceptableUsePage.tsx',
+      ];
+
+      for (const file of expectedFiles) {
+        const fullPath = path.join(pagesDir, file);
+        assert.ok(fs.existsSync(fullPath), `Policy page file must exist: ${file}`);
+        const content = fs.readFileSync(fullPath, 'utf8');
+        assert.ok(content.includes('SEOHead'), `${file} must include SEOHead component`);
+        assert.ok(content.includes('Breadcrumb') || content.includes('Legal Centre'), `${file} must include breadcrumbs navigation`);
+        assert.ok(content.includes('CIN') || content.includes('cin'), `${file} must display institutional registration details`);
+        assert.ok(content.includes('scrollToTop') || content.includes('Back to Top'), `${file} must provide back to top navigation`);
+      }
     });
   });
 
