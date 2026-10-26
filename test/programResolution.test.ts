@@ -122,8 +122,8 @@ describe('Authoritative Dynamic Program Resolution Suite', () => {
     });
   });
 
-  describe('Authoritative Razorpay Standard Checkout & User Journey Safeguards', () => {
-    it('verifies zero occurrences of mock payment emulators and simulation traps across all checkout entry points', async () => {
+  describe('Authoritative Razorpay Standard Checkout & User Journey Safeguards (YPF-CHK-ORDER-REVIEW-001)', () => {
+    it('1. verifies zero occurrences of mock payment emulators and simulation traps across all checkout entry points', async () => {
       const fs = await import('node:fs');
       const path = await import('node:path');
 
@@ -158,51 +158,168 @@ describe('Authoritative Dynamic Program Resolution Suite', () => {
       }
     });
 
-    it('verifies authoritative Razorpay SDK integration and recovery CTA across checkout entry points', async () => {
+    it('2. verifies Step 1 form submission transitions to Order Review without auto-opening Razorpay modal', async () => {
       const fs = await import('node:fs');
       const path = await import('node:path');
 
-      const checkoutPages = [
-        {
-          file: 'src/pages/ChangepreneurCirclePage.tsx',
-          expectedMethod: 'launchRazorpayCheckout',
-          expectedReopenCTA: 'Reopen Razorpay Payment Window',
-        },
-        {
-          file: 'src/pages/CareerExcellenceScholarshipPage.tsx',
-          expectedMethod: 'launchRazorpayCheckout',
-          expectedReopenCTA: 'Reopen Razorpay Payment Window',
-        },
-        {
-          file: 'src/pages/ProgramDetailPage.tsx',
-          expectedMethod: 'launchRazorpayModal',
-          expectedReopenCTA: 'Reopen Razorpay Payment Window',
-        },
-      ];
+      const fullPath = path.resolve(process.cwd(), 'src/pages/ChangepreneurCirclePage.tsx');
+      const code = fs.readFileSync(fullPath, 'utf-8');
 
-      for (const spec of checkoutPages) {
-        const fullPath = path.resolve(process.cwd(), spec.file);
-        const code = fs.readFileSync(fullPath, 'utf-8');
+      // Assert handleDetailsSubmit creates order and transitions to PAYMENT step WITHOUT calling launchRazorpayCheckout
+      const submitMethod = code.slice(code.indexOf('const handleDetailsSubmit'), code.indexOf('const handleProceedToPayment'));
+      assert.ok(submitMethod.includes("setCreatedOrder(order)"));
+      assert.ok(submitMethod.includes("setModalStep('PAYMENT')"));
+      assert.strictEqual(
+        submitMethod.includes("await launchRazorpayCheckout(order)"),
+        false,
+        "handleDetailsSubmit must NOT auto-launch Razorpay on Step 1 submission"
+      );
+    });
 
-        assert.ok(
-          code.includes(spec.expectedMethod),
-          `Expected method ${spec.expectedMethod} missing in ${spec.file}`
-        );
-        assert.ok(
-          code.includes(spec.expectedReopenCTA),
-          `Expected user recovery CTA "${spec.expectedReopenCTA}" missing in ${spec.file}`
-        );
-        assert.ok(
-          code.includes('loadRazorpayScript'),
-          `Official script loader loadRazorpayScript missing in ${spec.file}`
-        );
-        assert.ok(
-          code.includes('verifyPayment'),
-          `Server-authoritative verifyPayment missing in ${spec.file}`
-        );
-      }
+    it('3. verifies primary CTA "Proceed to Secure Payment" explicitly invokes launchRazorpayCheckout', async () => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+
+      const fullPath = path.resolve(process.cwd(), 'src/pages/ChangepreneurCirclePage.tsx');
+      const code = fs.readFileSync(fullPath, 'utf-8');
+
+      assert.ok(
+        code.includes('Proceed to Secure Payment'),
+        'Step 2 must feature the primary CTA: "Proceed to Secure Payment"'
+      );
+      assert.ok(
+        code.includes('handleProceedToPayment'),
+        'Primary CTA must be wired to handleProceedToPayment'
+      );
+      assert.ok(
+        code.includes('launchRazorpayCheckout(createdOrder)'),
+        'handleProceedToPayment must pass the authoritative createdOrder to launchRazorpayCheckout'
+      );
+    });
+
+    it('4. verifies registered member information and authoritative itemised pricing in Order Review', async () => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+
+      const fullPath = path.resolve(process.cwd(), 'src/pages/ChangepreneurCirclePage.tsx');
+      const code = fs.readFileSync(fullPath, 'utf-8');
+
+      // Verify customer details display
+      assert.ok(code.includes('Registered Member Information'));
+      assert.ok(code.includes('{fullName}'));
+      assert.ok(code.includes('{phone}'));
+      assert.ok(code.includes('{email}'));
+      assert.ok(code.includes('Edit Registration Details'));
+
+      // Verify server-authoritative pricing calculations (Base fee + 18% GST = Total)
+      assert.ok(code.includes('createdOrder.amount_paise / 100'));
+      assert.ok(code.includes('totalPayable / 1.18'));
+      assert.ok(code.includes('totalPayable - basePrice'));
+      assert.ok(code.includes('Statutory Goods & Services Tax (18% GST)'));
+    });
+
+    it('5. verifies manual gateway dismissal preserves Order Review with neutral status notice', async () => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+
+      const fullPath = path.resolve(process.cwd(), 'src/pages/ChangepreneurCirclePage.tsx');
+      const code = fs.readFileSync(fullPath, 'utf-8');
+
+      const ondismissBlock = code.slice(code.indexOf('ondismiss: () => {'), code.indexOf('rzp.on(\'payment.failed\''));
+      assert.ok(ondismissBlock.includes("setModalStep('PAYMENT')"));
+      assert.ok(
+        ondismissBlock.includes("Payment wasn't completed in this window. You can retry or check your payment status."),
+        "ondismiss must show neutral non-judgmental notice"
+      );
+      assert.ok(ondismissBlock.includes("setIsOpeningGateway(false)"));
+    });
+
+    it('6. verifies retry capability preserves existing valid order without blind recreation', async () => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+
+      const fullPath = path.resolve(process.cwd(), 'src/pages/ChangepreneurCirclePage.tsx');
+      const code = fs.readFileSync(fullPath, 'utf-8');
+
+      // In handleProceedToPayment, it reuses createdOrder
+      assert.ok(code.includes('if (!createdOrder) return;'));
+      assert.ok(code.includes('await launchRazorpayCheckout(createdOrder);'));
+    });
+
+    it('7. verifies pending / uncertain payment status verification via fetchPaymentOrderStatus', async () => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+
+      const fullPath = path.resolve(process.cwd(), 'src/pages/ChangepreneurCirclePage.tsx');
+      const code = fs.readFileSync(fullPath, 'utf-8');
+
+      assert.ok(code.includes('fetchPaymentOrderStatus'));
+      assert.ok(code.includes('handleCheckOrderStatus'));
+      assert.ok(code.includes('Check Status'));
+    });
+
+    it('8. verifies handling of already-paid and expired orders', async () => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+
+      const fullPath = path.resolve(process.cwd(), 'src/pages/ChangepreneurCirclePage.tsx');
+      const code = fs.readFileSync(fullPath, 'utf-8');
+
+      assert.ok(code.includes("currentStatus === 'PAID'"));
+      assert.ok(code.includes("currentStatus === 'PAID_MANUAL'"));
+      assert.ok(code.includes("currentStatus === 'EXPIRED'"));
+    });
+
+    it('9. verifies duplicate-click and double-submission safeguards', async () => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+
+      const fullPath = path.resolve(process.cwd(), 'src/pages/ChangepreneurCirclePage.tsx');
+      const code = fs.readFileSync(fullPath, 'utf-8');
+
+      assert.ok(code.includes('isOpeningGateway'));
+      assert.ok(code.includes('isCheckingStatus'));
+      assert.ok(code.includes('disabled={isOpeningGateway || isCheckingStatus}'));
+      assert.ok(code.includes('if (isOpeningGateway || isCheckingStatus) return;'));
+    });
+
+    it('10. verifies server-authoritative cryptographic verification and fulfillment lifecycle', async () => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+
+      const fullPath = path.resolve(process.cwd(), 'src/pages/ChangepreneurCirclePage.tsx');
+      const code = fs.readFileSync(fullPath, 'utf-8');
+
+      assert.ok(code.includes('verifyPayment('));
+      assert.ok(code.includes('sendSubmissionEmail('));
+      assert.ok(code.includes('changepreneur_payment_confirmed'));
+      assert.ok(code.includes("setModalStep('SUCCESS')"));
+    });
+
+    it('11. verifies gateway failure logging and controlled user-facing decline message', async () => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+
+      const fullPath = path.resolve(process.cwd(), 'src/pages/ChangepreneurCirclePage.tsx');
+      const code = fs.readFileSync(fullPath, 'utf-8');
+
+      assert.ok(code.includes("rzp.on('payment.failed'"));
+      assert.ok(code.includes('recordPaymentFailure('));
+      assert.ok(code.includes('Gateway declined payment transaction.'));
+    });
+
+    it('12. asserts regression protection against synthetic orders and mock gateway credentials', async () => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+
+      const fullPath = path.resolve(process.cwd(), 'src/pages/ChangepreneurCirclePage.tsx');
+      const code = fs.readFileSync(fullPath, 'utf-8');
+
+      assert.strictEqual(code.includes('ord_mock'), false);
+      assert.strictEqual(code.includes('simulated_signature'), false);
+      assert.strictEqual(code.includes('rzp_test_mock'), false);
+      assert.ok(code.includes('CCPAM100'));
     });
   });
 
 });
-

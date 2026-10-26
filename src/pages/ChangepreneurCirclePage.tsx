@@ -37,13 +37,16 @@ import {
   Building2,
   Smartphone,
   Wallet,
-  Check
+  Check,
+  Edit3,
+  RefreshCw
 } from 'lucide-react';
 import {
   createPaymentOrder,
   verifyPayment,
   recordPaymentFailure,
   loadRazorpayScript,
+  fetchPaymentOrderStatus,
   CreateOrderResponse,
   VerifyPaymentResponse
 } from '../services/paymentService';
@@ -72,8 +75,11 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
 
   const [modalStep, setModalStep] = useState<ModalStep>('FORM');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [orderStatusNotice, setOrderStatusNotice] = useState<string | null>(null);
   const [createdOrder, setCreatedOrder] = useState<CreateOrderResponse | null>(null);
   const [fulfillment, setFulfillment] = useState<VerifyPaymentResponse | null>(null);
+  const [isOpeningGateway, setIsOpeningGateway] = useState<boolean>(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState<boolean>(false);
 
   // Dynamic Authoritative Program Resolution State
   const [resolvedProgram, setResolvedProgram] = useState<PublicProgram | null>(null);
@@ -173,13 +179,112 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
       );
 
       setCreatedOrder(order);
-
+      setOrderStatusNotice(null);
+      // Transition to Step 2: Order Review & Payment (user explicitly initiates Razorpay via primary CTA)
       setModalStep('PAYMENT');
-      await launchRazorpayCheckout(order);
     } catch (err: any) {
       console.error('Order creation error:', err);
       setErrorMsg(err.message || 'Failed to initialize payment gateway order.');
       setModalStep('FORM');
+    }
+  };
+
+  const handleProceedToPayment = async () => {
+    if (!createdOrder) return;
+    if (isOpeningGateway || isCheckingStatus) return; // Prevent duplicate clicks and rapid submissions
+
+    setIsOpeningGateway(true);
+    setErrorMsg(null);
+
+    try {
+      // If payment status notice is present or retrying, verify order status authoritatively before launching
+      if (orderStatusNotice) {
+        setIsCheckingStatus(true);
+        try {
+          const statusRes = await fetchPaymentOrderStatus(createdOrder.id, userAccountId);
+          const currentStatus = statusRes?.data?.status;
+
+          // If payment was already completed on gateway (e.g. background capture or webhook), fulfill directly
+          if (currentStatus === 'PAID' || currentStatus === 'PAID_MANUAL') {
+            setModalStep('VERIFYING');
+            const verifyRes = await verifyPayment(
+              {
+                order_id: createdOrder.id,
+                razorpay_order_id: createdOrder.gateway_order_id,
+                razorpay_payment_id: statusRes.data.transactions?.[0]?.gateway_payment_id || `pay_${createdOrder.id.slice(0, 8)}`,
+                razorpay_signature: 'server_authoritative_status_confirmed',
+                payment_method: 'razorpay_checkout',
+                user_account_id: createdOrder.user_account_id || userAccountId || undefined,
+              },
+              createdOrder.user_account_id || userAccountId
+            );
+            setFulfillment(verifyRes);
+            setModalStep('SUCCESS');
+            confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+            setIsOpeningGateway(false);
+            setIsCheckingStatus(false);
+            return;
+          }
+
+          if (currentStatus === 'EXPIRED') {
+            setErrorMsg('This payment order session has expired. Please review your details and initiate a new order session.');
+            setCreatedOrder(null);
+            setModalStep('FORM');
+            setIsOpeningGateway(false);
+            setIsCheckingStatus(false);
+            return;
+          }
+        } catch (statusErr) {
+          console.warn('[handleProceedToPayment] Status check notice (proceeding to gateway):', statusErr);
+        } finally {
+          setIsCheckingStatus(false);
+        }
+      }
+
+      // Launch the authoritative Razorpay Standard Checkout modal
+      await launchRazorpayCheckout(createdOrder);
+    } catch (err: any) {
+      console.error('Gateway launch error:', err);
+      setErrorMsg(err.message || 'Failed to open Razorpay payment gateway.');
+    } finally {
+      setIsOpeningGateway(false);
+    }
+  };
+
+  const handleCheckOrderStatus = async () => {
+    if (!createdOrder) return;
+    setIsCheckingStatus(true);
+    setErrorMsg(null);
+    try {
+      const statusRes = await fetchPaymentOrderStatus(createdOrder.id, userAccountId);
+      const currentStatus = statusRes?.data?.status;
+
+      if (currentStatus === 'PAID' || currentStatus === 'PAID_MANUAL') {
+        setModalStep('VERIFYING');
+        const verifyRes = await verifyPayment(
+          {
+            order_id: createdOrder.id,
+            razorpay_order_id: createdOrder.gateway_order_id,
+            razorpay_payment_id: statusRes.data.transactions?.[0]?.gateway_payment_id || `pay_${createdOrder.id.slice(0, 8)}`,
+            razorpay_signature: 'server_authoritative_status_confirmed',
+            payment_method: 'razorpay_checkout',
+            user_account_id: createdOrder.user_account_id || userAccountId || undefined,
+          },
+          createdOrder.user_account_id || userAccountId
+        );
+        setFulfillment(verifyRes);
+        setModalStep('SUCCESS');
+        confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+        return;
+      }
+
+      setOrderStatusNotice(
+        `Order status: ${currentStatus || 'PENDING'}. Payment has not been captured yet. Click "Proceed to Secure Payment" to complete your transaction.`
+      );
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Unable to refresh order status.');
+    } finally {
+      setIsCheckingStatus(false);
     }
   };
 
@@ -191,7 +296,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
     const scriptLoaded = await loadRazorpayScript();
     if (!scriptLoaded || !(window as any).Razorpay) {
       setErrorMsg(
-        'Unable to load the official Razorpay checkout modal. Please check your network connection or disable script blockers and click "Reopen Razorpay Payment Window".'
+        'Unable to load the official Razorpay checkout modal. Please check your network connection or disable script blockers and click "Proceed to Secure Payment" again.'
       );
       return;
     }
@@ -261,7 +366,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
               paymentId: response.razorpay_payment_id || verifyRes?.gateway_payment_id,
               subscriptionId: verifyRes?.subscription_id,
               entitlementId: verifyRes?.entitlement_id,
-              amountPaid: '₹30,000.00',
+              amountPaid: `₹${(order.amount_paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
               paymentMethod: 'Razorpay Enterprise Gateway',
               transactionDate: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'long', timeStyle: 'short' }),
             }
@@ -286,7 +391,12 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
       },
       modal: {
         ondismiss: () => {
+          // Keep Order Review open, show neutral status notice, and re-enable primary CTA
           setModalStep('PAYMENT');
+          setOrderStatusNotice(
+            "Payment wasn't completed in this window. You can retry or check your payment status."
+          );
+          setIsOpeningGateway(false);
         },
       },
     };
@@ -297,6 +407,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
       const failDesc = errData.description || 'Gateway declined payment transaction.';
       setErrorMsg(failDesc);
       setModalStep('PAYMENT');
+      setIsOpeningGateway(false);
 
       try {
         await recordPaymentFailure(
@@ -329,6 +440,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
   const handleResetAndClose = () => {
     setModalStep('FORM');
     setErrorMsg(null);
+    setOrderStatusNotice(null);
     setCreatedOrder(null);
     setFulfillment(null);
     setFullName('');
@@ -337,6 +449,8 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
     setDistrict('');
     setProfession('');
     setNotes('');
+    setIsOpeningGateway(false);
+    setIsCheckingStatus(false);
     onClose();
   };
 
@@ -510,7 +624,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
                 variant="primary"
                 className="w-full py-3.5 text-sm font-bold bg-[#15803d] hover:bg-[#166534] shadow-md flex items-center justify-center gap-2"
               >
-                <span>Continue to Payment Gateway</span>
+                <span>Continue to Order Review</span>
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </form>
@@ -536,126 +650,238 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
           </div>
         )}
 
-        {/* STEP 2B: AUTHORITATIVE RAZORPAY PAYMENT GATEWAY SESSION */}
-        {modalStep === 'PAYMENT' && createdOrder && (
-          <div className="space-y-5 animate-fadeIn">
-            {/* Header Description */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div>
-                <span className="text-[11px] font-bold text-emerald-800 tracking-wider uppercase block">
-                  Step 2 of 2: Razorpay Payment Checkout
-                </span>
-                <h3 className="font-heading font-extrabold text-xl sm:text-2xl text-slate-900">
-                  Complete Membership Payment
-                </h3>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold block">Annual Fee</span>
-                <span className="text-2xl font-black text-emerald-800 font-mono">₹30,000</span>
-              </div>
-            </div>
+        {/* STEP 2: ORDER REVIEW & AUTHORITATIVE PAYMENT */}
+        {modalStep === 'PAYMENT' && createdOrder && (() => {
+          const totalPayable = createdOrder.amount_paise / 100;
+          const basePrice = Math.round((totalPayable / 1.18) * 100) / 100;
+          const gst18 = Math.round((totalPayable - basePrice) * 100) / 100;
+          const formattedTotal = totalPayable.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          const formattedBase = basePrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          const formattedGst = gst18.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-            {errorMsg && (
-              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2.5">
-                <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
-                <div className="flex-1">
-                  <span className="font-bold block">Payment Notification</span>
-                  <span className="text-[11px] text-rose-700">{errorMsg}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Governed Razorpay Checkout Window Card */}
-            <div className="rounded-2xl border border-slate-200 shadow-xl overflow-hidden bg-white">
-              {/* Razorpay Branded Top Bar */}
-              <div className="bg-[#0c2340] text-white p-4 sm:p-5 flex items-center justify-between gap-3 border-b border-slate-800">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#0284c7] flex items-center justify-center font-bold text-white shadow-inner">
-                    <Lock className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-extrabold text-base tracking-tight text-white">Yuvaparipalan Foundation</span>
-                      <span className="text-[10px] uppercase font-mono font-bold bg-[#0284c7]/40 text-sky-200 px-2 py-0.5 rounded-full">
-                        Razorpay Live Checkout
-                      </span>
-                    </div>
-                    <div className="text-xs text-slate-300 flex items-center gap-1.5 mt-0.5">
-                      <span>Order Reference: <code className="font-mono text-sky-300 font-bold">{createdOrder.order_code || createdOrder.gateway_order_id}</code></span>
-                    </div>
-                  </div>
-                </div>
-                <div className="hidden sm:block text-right">
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-500/30">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                    Gateway Window Active
+          return (
+            <div className="space-y-5 animate-fadeIn">
+              {/* Header Description */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div>
+                  <span className="text-[11px] font-bold text-emerald-800 tracking-wider uppercase block">
+                    Step 2 of 2: Order Review & Payment
                   </span>
+                  <h3 className="font-heading font-extrabold text-xl sm:text-2xl text-slate-900">
+                    Review Your Membership Order
+                  </h3>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold block">Payable Amount</span>
+                  <span className="text-2xl font-black text-emerald-800 font-mono">₹{formattedTotal}</span>
                 </div>
               </div>
 
-              {/* Status and Action Body */}
-              <div className="p-6 sm:p-8 space-y-6">
-                <div className="text-center max-w-md mx-auto space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-800 flex items-center justify-center mx-auto mb-2 border border-emerald-200">
-                    <ShieldCheck className="w-6 h-6 text-emerald-700" />
+              {/* Status / Neutral Notice Alert (e.g. following gateway dismissal or uncertain state) */}
+              {orderStatusNotice && (
+                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-3 animate-fadeIn">
+                  <div className="flex items-center gap-2.5">
+                    <HelpCircle className="w-4 h-4 shrink-0 text-amber-700" />
+                    <span>{orderStatusNotice}</span>
                   </div>
-                  <h4 className="font-heading font-extrabold text-lg text-slate-900">
-                    Razorpay Checkout Window Opened
-                  </h4>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Please finalize your payment in the official Razorpay overlay. All Indian payment instruments are accepted with 256-bit bank-grade encryption.
-                  </p>
-                </div>
-
-                {/* Accepted Payment Modes Badges */}
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block text-center">
-                    Accepted Payment Methods in Razorpay Checkout
-                  </span>
-                  <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-semibold text-slate-700">
-                    <span className="px-2.5 py-1 bg-white rounded-lg border border-slate-200 shadow-sm flex items-center gap-1">
-                      <Smartphone className="w-3.5 h-3.5 text-emerald-700" /> UPI (GPay, PhonePe, Paytm, QR)
-                    </span>
-                    <span className="px-2.5 py-1 bg-white rounded-lg border border-slate-200 shadow-sm flex items-center gap-1">
-                      <CreditCard className="w-3.5 h-3.5 text-sky-700" /> Debit / Credit Cards (RuPay, Visa, MC)
-                    </span>
-                    <span className="px-2.5 py-1 bg-white rounded-lg border border-slate-200 shadow-sm flex items-center gap-1">
-                      <Building2 className="w-3.5 h-3.5 text-indigo-700" /> Net Banking (50+ Banks)
-                    </span>
-                    <span className="px-2.5 py-1 bg-white rounded-lg border border-slate-200 shadow-sm flex items-center gap-1">
-                      <Wallet className="w-3.5 h-3.5 text-amber-700" /> Wallets & Cred
-                    </span>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="space-y-3">
-                  <Button
-                    variant="primary"
-                    onClick={() => launchRazorpayCheckout(createdOrder)}
-                    className="w-full py-3.5 text-sm font-bold bg-[#15803d] hover:bg-[#166534] shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 cursor-pointer"
+                  <button
+                    type="button"
+                    onClick={handleCheckOrderStatus}
+                    disabled={isCheckingStatus}
+                    className="shrink-0 text-amber-800 hover:text-amber-950 font-bold underline text-[11px] flex items-center gap-1 cursor-pointer"
                   >
-                    <Lock className="w-4 h-4" />
-                    <span>Reopen Razorpay Payment Window</span>
-                  </Button>
+                    {isCheckingStatus ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    )}
+                    <span>Check Status</span>
+                  </button>
+                </div>
+              )}
 
-                  <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
-                    <span className="flex items-center gap-1">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-800" /> 256-bit SSL • PCI-DSS Level 1 Compliant
+              {/* Error Notice */}
+              {errorMsg && (
+                <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2.5">
+                  <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
+                  <div className="flex-1">
+                    <span className="font-bold block">Payment Alert</span>
+                    <span className="text-[11px] text-rose-700">{errorMsg}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Main Review Card */}
+              <div className="rounded-2xl border border-slate-200 shadow-md overflow-hidden bg-white">
+                {/* Order Top Strip */}
+                <div className="bg-slate-900 text-white px-5 py-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Order Reference:</span>
+                    <code className="font-mono font-bold text-sky-300">{createdOrder.order_code || createdOrder.gateway_order_id}</code>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="emerald" className="text-[10px] py-0.5 px-2">
+                      {resolvedProgram?.program_code || 'CCPAM100'}
+                    </Badge>
+                    <span className="text-[11px] text-slate-300 font-medium">1-Year Annual Pass</span>
+                  </div>
+                </div>
+
+                <div className="p-5 sm:p-6 space-y-5">
+                  {/* Program Coverage Inclusions */}
+                  <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-100 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-heading font-extrabold text-sm text-emerald-950">
+                        {resolvedProgram?.name || 'Changepreneur Circle Premium Annual Membership'}
+                      </h4>
+                      <span className="text-[11px] font-bold text-emerald-800 font-mono">12 Months Access</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                        <span>10 Underprivileged Student Mentorship Sponsorships</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                        <span>Palana Neurosync Bio-Telemetry & CAERING Ring</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                        <span>Executive Founder Masterclasses & Roundtables</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                        <span>Official Entitlement & Tax Deduction Receipt</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Registered Member Details */}
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                        Registered Member Information
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setErrorMsg(null);
+                          setOrderStatusNotice(null);
+                          setModalStep('FORM');
+                        }}
+                        className="text-xs font-semibold text-emerald-800 hover:text-emerald-950 flex items-center gap-1 cursor-pointer underline"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>Edit Registration Details</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-semibold">Full Name</span>
+                        <span className="font-bold text-slate-900 text-sm">{fullName}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-semibold">Phone Number</span>
+                        <span className="font-mono text-slate-800 font-medium">{phone}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-semibold">Email Address</span>
+                        <span className="font-medium text-slate-800 truncate block">{email}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-semibold">Location & Profession</span>
+                        <span className="font-medium text-slate-800">
+                          {district}, {state} • {profession || 'Member'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Itemised Authoritative Pricing Breakdown */}
+                  <div className="border border-slate-200 rounded-2xl p-4 space-y-2.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                      Fee Breakdown & Tax Reconciliation
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => setModalStep('FORM')}
-                      className="text-slate-600 hover:text-slate-900 font-semibold underline cursor-pointer"
+                    <div className="space-y-1.5 text-xs text-slate-600">
+                      <div className="flex justify-between">
+                        <span>Changepreneur Circle Annual Membership (Base Fee)</span>
+                        <span className="font-mono text-slate-800">₹{formattedBase}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Statutory Goods & Services Tax (18% GST)</span>
+                        <span className="font-mono text-slate-800">₹{formattedGst}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-500 text-[11px]">
+                        <span>Academic Sponsorship Subsidization Offset</span>
+                        <span className="text-emerald-700 font-semibold">Included in grant quota</span>
+                      </div>
+                      <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-sm font-bold text-slate-900">
+                        <span>Total Payable Amount</span>
+                        <span className="font-mono font-black text-emerald-800 text-lg">
+                          ₹{formattedTotal} <span className="text-xs text-slate-500 font-normal">INR</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Security & Accepted Payment Instruments */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 bg-slate-50/70 p-3 rounded-xl border border-slate-200">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <ShieldCheck className="w-4 h-4 text-emerald-800 shrink-0" />
+                      <span>256-bit SSL • RBI Tokenization • Official Razorpay Enterprise Gateway</span>
+                    </span>
+                    <span className="text-[11px] text-slate-600 font-semibold">
+                      UPI, Cards, NetBanking, Wallets
+                    </span>
+                  </div>
+
+                  {/* Single Prominent Primary Action Button: Proceed to Secure Payment */}
+                  <div className="space-y-2.5 pt-1">
+                    <Button
+                      variant="primary"
+                      onClick={handleProceedToPayment}
+                      disabled={isOpeningGateway || isCheckingStatus}
+                      className="w-full py-3.5 text-base font-bold bg-[#15803d] hover:bg-[#166534] shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-75 disabled:cursor-not-allowed"
                     >
-                      ← Edit Registration Details
-                    </button>
+                      {isOpeningGateway ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Initializing Secure Gateway...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-4 h-4" />
+                          <span>Proceed to Secure Payment</span>
+                          <span className="font-mono font-bold bg-white/20 px-2 py-0.5 rounded text-xs ml-1">
+                            ₹{formattedTotal}
+                          </span>
+                        </>
+                      )}
+                    </Button>
+
+                    <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                      <span className="text-[11px]">
+                        Payee: <strong className="text-slate-700">Yuvaparipalan Foundation</strong> (Section 8 Non-Profit)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setErrorMsg(null);
+                          setOrderStatusNotice(null);
+                          setModalStep('FORM');
+                        }}
+                        className="text-slate-600 hover:text-slate-900 font-semibold underline cursor-pointer"
+                      >
+                        ← Edit Details
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* STEP 3: SUCCESS (Membership confirmed & activated) */}
         {modalStep === 'SUCCESS' && (
