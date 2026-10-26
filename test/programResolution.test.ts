@@ -122,4 +122,87 @@ describe('Authoritative Dynamic Program Resolution Suite', () => {
     });
   });
 
+  describe('Authoritative Razorpay Standard Checkout & User Journey Safeguards', () => {
+    it('verifies zero occurrences of mock payment emulators and simulation traps across all checkout entry points', async () => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+
+      const filesToCheck = [
+        'src/pages/ChangepreneurCirclePage.tsx',
+        'src/pages/CareerExcellenceScholarshipPage.tsx',
+        'src/pages/ProgramDetailPage.tsx',
+      ];
+
+      const forbiddenPatterns = [
+        'Direct payment simulation is disabled in production',
+        'simulated_test_mode_valid_signature',
+        'test_mode_simulated_signature',
+        'handleExecutePayment',
+        'Confirm Test Checkout Verification',
+        'selectedUpiApp',
+        'cardNumber',
+        'cardCvv',
+      ];
+
+      for (const relPath of filesToCheck) {
+        const fullPath = path.resolve(process.cwd(), relPath);
+        const code = fs.readFileSync(fullPath, 'utf-8');
+
+        for (const pattern of forbiddenPatterns) {
+          assert.strictEqual(
+            code.includes(pattern),
+            false,
+            `Forbidden mock pattern "${pattern}" detected in checkout file: ${relPath}`
+          );
+        }
+      }
+    });
+
+    it('verifies authoritative Razorpay SDK integration and recovery CTA across checkout entry points', async () => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+
+      const checkoutPages = [
+        {
+          file: 'src/pages/ChangepreneurCirclePage.tsx',
+          expectedMethod: 'launchRazorpayCheckout',
+          expectedReopenCTA: 'Reopen Razorpay Payment Window',
+        },
+        {
+          file: 'src/pages/CareerExcellenceScholarshipPage.tsx',
+          expectedMethod: 'launchRazorpayCheckout',
+          expectedReopenCTA: 'Reopen Razorpay Payment Window',
+        },
+        {
+          file: 'src/pages/ProgramDetailPage.tsx',
+          expectedMethod: 'launchRazorpayModal',
+          expectedReopenCTA: 'Reopen Razorpay Payment Window',
+        },
+      ];
+
+      for (const spec of checkoutPages) {
+        const fullPath = path.resolve(process.cwd(), spec.file);
+        const code = fs.readFileSync(fullPath, 'utf-8');
+
+        assert.ok(
+          code.includes(spec.expectedMethod),
+          `Expected method ${spec.expectedMethod} missing in ${spec.file}`
+        );
+        assert.ok(
+          code.includes(spec.expectedReopenCTA),
+          `Expected user recovery CTA "${spec.expectedReopenCTA}" missing in ${spec.file}`
+        );
+        assert.ok(
+          code.includes('loadRazorpayScript'),
+          `Official script loader loadRazorpayScript missing in ${spec.file}`
+        );
+        assert.ok(
+          code.includes('verifyPayment'),
+          `Server-authoritative verifyPayment missing in ${spec.file}`
+        );
+      }
+    });
+  });
+
 });
+

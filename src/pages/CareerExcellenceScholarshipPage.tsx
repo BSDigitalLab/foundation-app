@@ -27,6 +27,8 @@ import {
   Lock,
   Building2,
   Smartphone,
+  CreditCard,
+  Wallet,
   Check,
   FileCheck,
   Target,
@@ -75,18 +77,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
   const [isResolvingProgram, setIsResolvingProgram] = useState<boolean>(true);
   const [programResolutionError, setProgramResolutionError] = useState<string | null>(null);
 
-  // Razorpay Payment Instruments & Modes State
-  const [paymentCategory, setPaymentCategory] = useState<'upi' | 'card' | 'netbanking' | 'wallet'>('upi');
-  const [upiMode, setUpiMode] = useState<'app' | 'id' | 'qr'>('app');
-  const [selectedUpiApp, setSelectedUpiApp] = useState<'Google Pay' | 'PhonePe' | 'Paytm' | 'BHIM UPI'>('Google Pay');
-  const [upiId, setUpiId] = useState('');
-  const [cardNumber, setCardNumber] = useState('4532 8901 2345 6789');
-  const [cardExpiry, setCardExpiry] = useState('12/28');
-  const [cardCvv, setCardCvv] = useState('789');
-  const [cardName, setCardName] = useState('');
-  const [selectedBank, setSelectedBank] = useState('State Bank of India');
-  const [selectedWallet, setSelectedWallet] = useState('Paytm Wallet');
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
 
   const { userAccountId } = useCustomerAuthStore();
 
@@ -180,128 +171,8 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
 
       setCreatedOrder(order);
 
-      // 2. Attempt official Razorpay Checkout SDK Modal Launch
-      const scriptLoaded = await loadRazorpayScript();
-      const hasLiveKey = Boolean(order.key_id && !order.key_id.includes('mock') && !order.key_id.includes('test_cesp'));
-
-      if (scriptLoaded && (window as any).Razorpay && hasLiveKey) {
-        setModalStep('PAYMENT');
-        const options = {
-          key: order.key_id,
-          amount: order.amount_paise,
-          currency: order.currency || 'INR',
-          name: 'Yuvaparipalan Foundation',
-          description: 'Career Excellence & Scholarship Program (₹549)',
-          order_id: order.gateway_order_id,
-          prefill: {
-            name: trimmedName,
-            email: trimmedEmail,
-            contact: trimmedPhone,
-          },
-          theme: {
-            color: '#064e3b',
-          },
-          handler: async (response: any) => {
-            setModalStep('VERIFYING');
-            try {
-              const verifyRes = await verifyPayment(
-                {
-                  order_id: order.id,
-                  razorpay_order_id: response.razorpay_order_id || order.gateway_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                  payment_method: 'razorpay_checkout',
-                  user_account_id: order.user_account_id || userAccountId || undefined,
-                },
-                order.user_account_id || userAccountId
-              );
-
-              setFulfillment(verifyRes);
-              setModalStep('SUCCESS');
-              confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
-
-              // Dispatch official Tax Invoice & Payment Confirmation Email
-              sendSubmissionEmail({
-                formType: 'cesp_payment_confirmed',
-                formData: {
-                  fullName: trimmedName,
-                  email: trimmedEmail,
-                  phone: trimmedPhone,
-                  state,
-                  district,
-                  educationLevel,
-                  institution: institution.trim() || 'General Enrollment',
-                  notes: notes.trim() || 'Direct Online Enrollment',
-                  program: 'Career Excellence & Scholarship Program (CESP100)',
-                  orderCode: verifyRes?.order_code || order?.order_code || order?.id,
-                  gatewayOrderId: order?.gateway_order_id,
-                  paymentId: response.razorpay_payment_id || verifyRes?.gateway_payment_id,
-                  amountPaid: '₹549.00',
-                  paymentMethod: 'Razorpay Enterprise Gateway',
-                  transactionDate: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'long', timeStyle: 'short' }),
-                }
-              }).catch((e) => console.warn('Payment email notice:', e));
-            } catch (vErr: any) {
-              const errMsg = vErr.message || 'Payment verification failed.';
-              setErrorMsg(errMsg);
-              setModalStep('PAYMENT');
-              recordPaymentFailure(
-                {
-                  order_id: order.id,
-                  gateway_order_id: response.razorpay_order_id || order.gateway_order_id,
-                  gateway_payment_id: response.razorpay_payment_id,
-                  error_code: 'VERIFICATION_FAILED',
-                  error_description: errMsg,
-                  payment_method: 'razorpay_checkout',
-                  user_account_id: order.user_account_id || userAccountId || undefined,
-                },
-                order.user_account_id || userAccountId
-              ).catch((e) => console.warn('Failed to record failure:', e));
-            }
-          },
-          modal: {
-            ondismiss: () => {
-              setModalStep('PAYMENT');
-            },
-          },
-        };
-
-        const rzp = new (window as any).Razorpay(options);
-        rzp.on('payment.failed', async (failResp: any) => {
-          const errData = failResp?.error || {};
-          const failDesc = errData.description || 'Gateway declined transaction.';
-          setErrorMsg(failDesc);
-          setModalStep('PAYMENT');
-
-          try {
-            await recordPaymentFailure(
-              {
-                order_id: order.id,
-                gateway_order_id: errData.metadata?.order_id || order.gateway_order_id,
-                gateway_payment_id: errData.metadata?.payment_id,
-                error_code: errData.code,
-                error_description: failDesc,
-                error_source: errData.source,
-                error_step: errData.step,
-                error_reason: errData.reason,
-                payment_method: 'razorpay_checkout',
-                metadata: {
-                  program: 'CESP100',
-                  fullName: trimmedName,
-                },
-                user_account_id: order.user_account_id || userAccountId || undefined,
-              },
-              order.user_account_id || userAccountId
-            );
-          } catch (failLogErr) {
-            console.warn('Failed to record Razorpay failure:', failLogErr);
-          }
-        });
-        rzp.open();
-      } else {
-        // Direct Checkout Payment Instrument Selector
-        setModalStep('PAYMENT');
-      }
+      setModalStep('PAYMENT');
+      await launchRazorpayCheckout(order);
     } catch (err: any) {
       console.error('Order creation error:', err);
       setErrorMsg(err.message || 'Failed to initialize payment gateway order.');
@@ -309,83 +180,145 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
     }
   };
 
-  const getSelectedInstrumentLabel = () => {
-    if (paymentCategory === 'upi') {
-      if (upiMode === 'app') return `UPI (${selectedUpiApp})`;
-      if (upiMode === 'id') return `UPI ID (${upiId.trim() || 'Direct VPA'})`;
-      return 'UPI (Dynamic QR Code)';
-    }
-    if (paymentCategory === 'card') {
-      const cleanDigits = cardNumber.replace(/\s+/g, '');
-      const last4 = cleanDigits.slice(-4) || '6789';
-      return `Card (•••• ${last4})`;
-    }
-    if (paymentCategory === 'netbanking') {
-      return `Netbanking (${selectedBank})`;
-    }
-    return `Wallet (${selectedWallet})`;
-  };
+  const launchRazorpayCheckout = async (targetOrder?: CreateOrderResponse | null) => {
+    const order = targetOrder || createdOrder;
+    if (!order) return;
+    setErrorMsg(null);
 
-  const handleExecutePayment = async () => {
-    if (!createdOrder) return;
-
-    // Disallow simulated test payments in production
-    if (!import.meta.env.DEV) {
-      setErrorMsg('Direct payment simulation is disabled in production. Please use the official Razorpay checkout.');
+    const scriptLoaded = await loadRazorpayScript();
+    if (!scriptLoaded || !(window as any).Razorpay) {
+      setErrorMsg(
+        'Unable to load the official Razorpay checkout modal. Please check your network connection or disable script blockers and click "Reopen Razorpay Payment Window".'
+      );
       return;
     }
 
-    setIsProcessingPayment(true);
-    setModalStep('VERIFYING');
-    setErrorMsg(null);
-
-    const instrumentLabel = getSelectedInstrumentLabel();
-    const simPaymentId = `pay_cesp_${Date.now()}`;
-
-    try {
-      const verifyRes = await verifyPayment(
-        {
-          order_id: createdOrder.id,
-          razorpay_order_id: createdOrder.gateway_order_id,
-          razorpay_payment_id: simPaymentId,
-          razorpay_signature: 'simulated_test_mode_valid_signature',
-          payment_method: paymentCategory,
-          user_account_id: createdOrder.user_account_id || userAccountId || undefined,
-        },
-        createdOrder.user_account_id || userAccountId
-      );
-
-      setFulfillment(verifyRes);
-      setModalStep('SUCCESS');
-      confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
-
-      // Dispatch official Tax Invoice & Payment Confirmation Email with tax breakdown
-      sendSubmissionEmail({
-        formType: 'cesp_payment_confirmed',
-        formData: {
-          fullName: fullName.trim(),
-          email: email.trim(),
-          phone: phone.trim(),
-          state,
-          district,
-          educationLevel,
-          institution: institution.trim() || 'General Enrollment',
-          notes: notes.trim() || 'Direct Online Enrollment',
-          program: 'Career Excellence & Scholarship Program (CESP100)',
-          orderCode: verifyRes?.order_code || createdOrder?.order_code || createdOrder?.id,
-          gatewayOrderId: createdOrder?.gateway_order_id,
-          paymentId: simPaymentId,
-          amountPaid: '₹549.00',
-          paymentMethod: `${instrumentLabel} via Razorpay Gateway`,
-          transactionDate: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'long', timeStyle: 'short' }),
-        }
-      }).catch((e) => console.warn('Payment email notice:', e));
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Payment processing failed. Please try again.');
-      setModalStep('PAYMENT');
-    } finally {
-      setIsProcessingPayment(false);
+    if (!order.key_id) {
+      setErrorMsg('Payment gateway configuration is missing key identifier. Please contact support.');
+      return;
     }
+
+    const trimmedName = fullName.trim();
+    const trimmedEmail = email.trim();
+    const trimmedPhone = phone.trim();
+
+    const options = {
+      key: order.key_id,
+      amount: order.amount_paise,
+      currency: order.currency || 'INR',
+      name: 'Yuvaparipalan Foundation',
+      description: 'Career Excellence & Scholarship Program (₹549)',
+      order_id: order.gateway_order_id,
+      prefill: {
+        name: trimmedName,
+        email: trimmedEmail,
+        contact: trimmedPhone,
+      },
+      notes: {
+        program_code: 'CESP100',
+        order_code: order.order_code,
+      },
+      theme: {
+        color: '#064e3b',
+      },
+      handler: async (response: any) => {
+        setModalStep('VERIFYING');
+        try {
+          const verifyRes = await verifyPayment(
+            {
+              order_id: order.id,
+              razorpay_order_id: response.razorpay_order_id || order.gateway_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              payment_method: 'razorpay_checkout',
+              user_account_id: order.user_account_id || userAccountId || undefined,
+            },
+            order.user_account_id || userAccountId
+          );
+
+          setFulfillment(verifyRes);
+          setModalStep('SUCCESS');
+          confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+
+          // Dispatch official Tax Invoice & Payment Confirmation Email
+          sendSubmissionEmail({
+            formType: 'cesp_payment_confirmed',
+            formData: {
+              fullName: trimmedName,
+              email: trimmedEmail,
+              phone: trimmedPhone,
+              state,
+              district,
+              educationLevel,
+              institution: institution.trim() || 'General Enrollment',
+              notes: notes.trim() || 'Direct Online Enrollment',
+              program: 'Career Excellence & Scholarship Program (CESP100)',
+              orderCode: verifyRes?.order_code || order?.order_code || order?.id,
+              gatewayOrderId: order?.gateway_order_id,
+              paymentId: response.razorpay_payment_id || verifyRes?.gateway_payment_id,
+              amountPaid: '₹549.00',
+              paymentMethod: 'Razorpay Enterprise Gateway',
+              transactionDate: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'long', timeStyle: 'short' }),
+            }
+          }).catch((e) => console.warn('Payment email notice:', e));
+        } catch (vErr: any) {
+          const errMsg = vErr.message || 'Payment verification failed.';
+          setErrorMsg(errMsg);
+          setModalStep('PAYMENT');
+          recordPaymentFailure(
+            {
+              order_id: order.id,
+              gateway_order_id: response.razorpay_order_id || order.gateway_order_id,
+              gateway_payment_id: response.razorpay_payment_id,
+              error_code: 'VERIFICATION_FAILED',
+              error_description: errMsg,
+              payment_method: 'razorpay_checkout',
+              user_account_id: order.user_account_id || userAccountId || undefined,
+            },
+            order.user_account_id || userAccountId
+          ).catch((e) => console.warn('Failed to record failure:', e));
+        }
+      },
+      modal: {
+        ondismiss: () => {
+          setModalStep('PAYMENT');
+        },
+      },
+    };
+
+    const rzp = new (window as any).Razorpay(options);
+    rzp.on('payment.failed', async (failResp: any) => {
+      const errData = failResp?.error || {};
+      const failDesc = errData.description || 'Gateway declined transaction.';
+      setErrorMsg(failDesc);
+      setModalStep('PAYMENT');
+
+      try {
+        await recordPaymentFailure(
+          {
+            order_id: order.id,
+            gateway_order_id: errData.metadata?.order_id || order.gateway_order_id,
+            gateway_payment_id: errData.metadata?.payment_id,
+            error_code: errData.code,
+            error_description: failDesc,
+            error_source: errData.source,
+            error_step: errData.step,
+            error_reason: errData.reason,
+            payment_method: 'razorpay_checkout',
+            metadata: {
+              program: 'CESP100',
+              fullName: trimmedName,
+            },
+            user_account_id: order.user_account_id || userAccountId || undefined,
+          },
+          order.user_account_id || userAccountId
+        );
+      } catch (failLogErr) {
+        console.warn('Failed to record Razorpay failure:', failLogErr);
+      }
+    });
+
+    rzp.open();
   };
 
   const handleResetAndClose = () => {
@@ -612,287 +545,119 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
           </div>
         )}
 
-        {/* STEP 3: PAYMENT INSTRUMENT SELECTION */}
+        {/* STEP 3: AUTHORITATIVE RAZORPAY PAYMENT GATEWAY SESSION */}
         {modalStep === 'PAYMENT' && createdOrder && (
-          <div>
-            <div className="mb-5 space-y-1">
-              <div className="flex items-center justify-between">
-                <Badge variant="emerald">Step 2 of 2: Secure Payment</Badge>
-                <span className="text-xs font-mono font-bold text-emerald-900 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
-                  Order Code: {createdOrder.order_code || createdOrder.id}
+          <div className="space-y-5 animate-fadeIn">
+            {/* Header Description */}
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div>
+                <span className="text-[11px] font-bold text-emerald-800 tracking-wider uppercase block">
+                  Step 2 of 2: Razorpay Payment Checkout
                 </span>
+                <h3 className="font-heading font-extrabold text-xl sm:text-2xl text-slate-900">
+                  Complete Enrollment Fee
+                </h3>
               </div>
-              <h3 className="font-heading font-extrabold text-2xl text-slate-900">
-                Complete Enrollment Fee
-              </h3>
-              <p className="text-xs text-slate-600">
-                Choose your preferred payment method to complete the ₹549 enrollment fee via Razorpay.
-              </p>
+              <div className="text-right">
+                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold block">Enrollment Fee</span>
+                <span className="text-2xl font-black text-emerald-800 font-mono">₹549</span>
+              </div>
             </div>
 
             {errorMsg && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMsg}</span>
+              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2.5">
+                <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
+                <div className="flex-1">
+                  <span className="font-bold block">Payment Notification</span>
+                  <span className="text-[11px] text-rose-700">{errorMsg}</span>
+                </div>
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-5">
-              {/* Left Column: Instrument Categories */}
-              <div className="sm:col-span-4 space-y-1.5 border-r border-slate-200 pr-0 sm:pr-4">
-                {[
-                  { id: 'upi', label: 'UPI (GPay / PhonePe)', icon: Smartphone },
-                  { id: 'card', label: 'Credit / Debit Card', icon: Award },
-                  { id: 'netbanking', label: 'Net Banking', icon: Building2 },
-                  { id: 'wallet', label: 'Wallets', icon: Sparkles },
-                ].map((item) => {
-                  const Icon = item.icon;
-                  const isActive = paymentCategory === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setPaymentCategory(item.id as any)}
-                      className={`w-full p-3 rounded-xl text-left text-xs font-bold transition-all flex items-center gap-2.5 ${
-                        isActive
-                          ? 'bg-emerald-800 text-white shadow-sm'
-                          : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-200' : 'text-slate-500'}`} />
-                      <span>{item.label}</span>
-                    </button>
-                  );
-                })}
-
-                {/* Subsidized Fee Summary */}
-                <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 mt-4 text-[11px] space-y-1 text-slate-700">
-                  <div className="flex justify-between font-bold text-slate-900">
-                    <span>Total Payable:</span>
-                    <span className="font-mono text-emerald-900 font-bold">₹549.00</span>
+            {/* Governed Razorpay Checkout Window Card */}
+            <div className="rounded-2xl border border-slate-200 shadow-xl overflow-hidden bg-white">
+              {/* Razorpay Branded Top Bar */}
+              <div className="bg-[#0c2340] text-white p-4 sm:p-5 flex items-center justify-between gap-3 border-b border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#0284c7] flex items-center justify-center font-bold text-white shadow-inner">
+                    <Lock className="w-5 h-5" />
                   </div>
-                  <div className="text-[10px] text-slate-500">
-                    All-inclusive (all 7 offerings included)
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-base tracking-tight text-white">Yuvaparipalan Foundation</span>
+                      <span className="text-[10px] uppercase font-mono font-bold bg-[#0284c7]/40 text-sky-200 px-2 py-0.5 rounded-full">
+                        Razorpay Live Checkout
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-300 flex items-center gap-1.5 mt-0.5">
+                      <span>Order Reference: <code className="font-mono text-sky-300 font-bold">{createdOrder.order_code || createdOrder.gateway_order_id}</code></span>
+                    </div>
                   </div>
+                </div>
+                <div className="hidden sm:block text-right">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-500/30">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    Gateway Window Active
+                  </span>
                 </div>
               </div>
 
-              {/* Right Column: Active Category Details */}
-              <div className="sm:col-span-8 flex flex-col justify-between space-y-4">
-                {/* Category 1: UPI Options */}
-                {paymentCategory === 'upi' && (
-                  <div className="space-y-3 animate-fadeIn">
-                    <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-xl">
-                      {[
-                        { id: 'app', label: 'UPI Apps' },
-                        { id: 'id', label: 'Enter UPI ID' },
-                        { id: 'qr', label: 'Scan QR' },
-                      ].map((sub) => (
-                        <button
-                          key={sub.id}
-                          type="button"
-                          onClick={() => setUpiMode(sub.id as any)}
-                          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                            upiMode === sub.id
-                              ? 'bg-white text-emerald-950 shadow-sm'
-                              : 'text-slate-600 hover:text-slate-900'
-                          }`}
-                        >
-                          {sub.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {upiMode === 'app' && (
-                      <div className="grid grid-cols-2 gap-2">
-                        {['Google Pay', 'PhonePe', 'Paytm', 'BHIM UPI'].map((app) => (
-                          <button
-                            key={app}
-                            type="button"
-                            onClick={() => setSelectedUpiApp(app as any)}
-                            className={`p-3 rounded-xl border text-xs font-bold text-left flex items-center justify-between transition-all ${
-                              selectedUpiApp === app
-                                ? 'border-emerald-800 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-800'
-                                : 'border-slate-200 hover:border-slate-300 text-slate-700'
-                            }`}
-                          >
-                            <span>{app}</span>
-                            {selectedUpiApp === app && <Check className="w-4 h-4 text-emerald-800 shrink-0" />}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {upiMode === 'id' && (
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-700 block">Virtual Payment Address (VPA)</label>
-                        <input
-                          type="text"
-                          placeholder="yourname@okaxis or mobile@upi"
-                          value={upiId}
-                          onChange={(e) => setUpiId(e.target.value)}
-                          className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-emerald-800"
-                        />
-                        <span className="text-[10px] text-slate-500">Collect request will be sent to your UPI app.</span>
-                      </div>
-                    )}
-
-                    {upiMode === 'qr' && (
-                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-2">
-                        <div className="w-28 h-28 bg-white border border-slate-300 rounded-xl mx-auto flex items-center justify-center p-2 shadow-sm">
-                          <div className="text-center">
-                            <Sparkle className="w-8 h-8 text-emerald-800 mx-auto" />
-                            <span className="text-[9px] font-mono font-bold text-slate-700 block mt-1">UPI QR CODE</span>
-                          </div>
-                        </div>
-                        <p className="text-[11px] text-slate-600 font-medium">Scan with any UPI app to pay ₹549 instantly</p>
-                      </div>
-                    )}
+              {/* Status and Action Body */}
+              <div className="p-6 sm:p-8 space-y-6">
+                <div className="text-center max-w-md mx-auto space-y-2">
+                  <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-800 flex items-center justify-center mx-auto mb-2 border border-emerald-200">
+                    <ShieldCheck className="w-6 h-6 text-emerald-700" />
                   </div>
-                )}
+                  <h4 className="font-heading font-extrabold text-lg text-slate-900">
+                    Razorpay Checkout Window Opened
+                  </h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Please complete your ₹549 enrollment fee payment in the official Razorpay overlay. All Indian payment instruments are accepted with 256-bit bank-grade encryption.
+                  </p>
+                </div>
 
-                {/* Category 2: Card Options */}
-                {paymentCategory === 'card' && (
-                  <div className="space-y-2.5 animate-fadeIn">
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-700 block mb-0.5">Card Number</label>
-                      <input
-                        type="text"
-                        value={cardNumber}
-                        onChange={(e) => setCardNumber(e.target.value)}
-                        placeholder="4532 8901 2345 6789"
-                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-emerald-800 font-mono"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-700 block mb-0.5">Expiry Date</label>
-                        <input
-                          type="text"
-                          value={cardExpiry}
-                          onChange={(e) => setCardExpiry(e.target.value)}
-                          placeholder="MM/YY"
-                          className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-emerald-800 font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-700 block mb-0.5">CVV</label>
-                        <input
-                          type="password"
-                          maxLength={4}
-                          value={cardCvv}
-                          onChange={(e) => setCardCvv(e.target.value)}
-                          placeholder="•••"
-                          className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-emerald-800 font-mono"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-700 block mb-0.5">Name on Card</label>
-                      <input
-                        type="text"
-                        value={cardName}
-                        onChange={(e) => setCardName(e.target.value)}
-                        placeholder="Full Name as on card"
-                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-emerald-800"
-                      />
-                    </div>
+                {/* Accepted Payment Modes Badges */}
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block text-center">
+                    Accepted Payment Methods in Razorpay Checkout
+                  </span>
+                  <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-semibold text-slate-700">
+                    <span className="px-2.5 py-1 bg-white rounded-lg border border-slate-200 shadow-sm flex items-center gap-1">
+                      <Smartphone className="w-3.5 h-3.5 text-emerald-700" /> UPI (GPay, PhonePe, Paytm, QR)
+                    </span>
+                    <span className="px-2.5 py-1 bg-white rounded-lg border border-slate-200 shadow-sm flex items-center gap-1">
+                      <CreditCard className="w-3.5 h-3.5 text-sky-700" /> Debit / Credit Cards (RuPay, Visa, MC)
+                    </span>
+                    <span className="px-2.5 py-1 bg-white rounded-lg border border-slate-200 shadow-sm flex items-center gap-1">
+                      <Building2 className="w-3.5 h-3.5 text-indigo-700" /> Net Banking (50+ Banks)
+                    </span>
+                    <span className="px-2.5 py-1 bg-white rounded-lg border border-slate-200 shadow-sm flex items-center gap-1">
+                      <Wallet className="w-3.5 h-3.5 text-amber-700" /> Wallets & Cred
+                    </span>
                   </div>
-                )}
+                </div>
 
-                {/* Category 3: Net Banking Options */}
-                {paymentCategory === 'netbanking' && (
-                  <div className="space-y-2.5 animate-fadeIn">
-                    <span className="text-[11px] font-bold text-slate-700 block">Popular Banks</span>
-                    <div className="grid grid-cols-2 gap-2">
-                      {['State Bank of India', 'HDFC Bank', 'ICICI Bank', 'Federal Bank'].map((bank) => (
-                        <button
-                          key={bank}
-                          type="button"
-                          onClick={() => setSelectedBank(bank)}
-                          className={`p-2 rounded-xl border text-xs font-semibold text-left flex items-center justify-between transition-all ${
-                            selectedBank === bank
-                              ? 'border-emerald-800 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-800'
-                              : 'border-slate-200 hover:border-slate-300 text-slate-700'
-                          }`}
-                        >
-                          <span className="truncate">{bank}</span>
-                          {selectedBank === bank && <Check className="w-3.5 h-3.5 text-emerald-800 shrink-0" />}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="pt-1">
-                      <select
-                        value={selectedBank}
-                        onChange={(e) => setSelectedBank(e.target.value)}
-                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-emerald-800 bg-white"
-                      >
-                        <option value="State Bank of India">State Bank of India</option>
-                        <option value="HDFC Bank">HDFC Bank</option>
-                        <option value="ICICI Bank">ICICI Bank</option>
-                        <option value="Federal Bank">Federal Bank</option>
-                        <option value="Canara Bank">Canara Bank</option>
-                        <option value="Axis Bank">Axis Bank</option>
-                        <option value="South Indian Bank">South Indian Bank</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                {/* Category 4: Wallets Options */}
-                {paymentCategory === 'wallet' && (
-                  <div className="space-y-2.5 animate-fadeIn">
-                    <span className="text-[11px] font-bold text-slate-700 block">Select Wallet Provider</span>
-                    <div className="grid grid-cols-2 gap-2">
-                      {['Paytm Wallet', 'PhonePe Wallet', 'Amazon Pay', 'MobiKwik'].map((wallet) => (
-                        <button
-                          key={wallet}
-                          type="button"
-                          onClick={() => setSelectedWallet(wallet)}
-                          className={`p-2.5 rounded-xl border text-xs font-semibold text-left flex items-center justify-between transition-all ${
-                            selectedWallet === wallet
-                              ? 'border-emerald-800 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-800'
-                              : 'border-slate-200 hover:border-slate-300 text-slate-700'
-                          }`}
-                        >
-                          <span>{wallet}</span>
-                          {selectedWallet === wallet && <Check className="w-3.5 h-3.5 text-emerald-800 shrink-0" />}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Bottom Action Footer */}
-                <div className="pt-3 border-t border-slate-200 space-y-2">
+                {/* Action Buttons */}
+                <div className="space-y-3">
                   <Button
                     variant="primary"
-                    onClick={handleExecutePayment}
-                    disabled={isProcessingPayment}
-                    className="w-full py-3 text-sm font-bold bg-[#15803d] hover:bg-[#166534] shadow-md flex items-center justify-center gap-2"
+                    onClick={() => launchRazorpayCheckout(createdOrder)}
+                    className="w-full py-3.5 text-sm font-bold bg-[#15803d] hover:bg-[#166534] shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    {isProcessingPayment ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Authorizing via Razorpay...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="w-4 h-4" />
-                        <span>Pay ₹549 via {getSelectedInstrumentLabel()}</span>
-                      </>
-                    )}
+                    <Lock className="w-4 h-4" />
+                    <span>Reopen Razorpay Payment Window</span>
                   </Button>
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+
+                  <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
                     <span className="flex items-center gap-1">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-800" /> 256-bit SSL • PCI-DSS Level 1
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-800" /> 256-bit SSL • PCI-DSS Level 1 Compliant
                     </span>
                     <button
                       type="button"
                       onClick={() => setModalStep('FORM')}
-                      className="text-slate-600 hover:text-slate-900 underline"
+                      className="text-slate-600 hover:text-slate-900 font-semibold underline cursor-pointer"
                     >
-                      ← Edit Details
+                      ← Edit Registration Details
                     </button>
                   </div>
                 </div>

@@ -6,7 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { 
   GraduationCap, Clock, Award, ShieldCheck, CheckCircle2, 
-  ArrowLeft, ArrowRight, Share2, Layers, BookOpen, AlertCircle, Loader2, Sparkles, Building2, Package, UserCheck
+  ArrowLeft, ArrowRight, Share2, Layers, BookOpen, AlertCircle, Loader2, Sparkles, Building2, Package, UserCheck, Lock
 } from 'lucide-react';
 import { useCustomerAuthStore } from '../stores/useCustomerAuthStore';
 import { 
@@ -147,106 +147,117 @@ export const ProgramDetailPage: React.FC = () => {
 
       const order = await createPaymentOrder(program.id, userAccountId, customerDetails);
       setCreatedOrder(order);
-
-      const scriptLoaded = await loadRazorpayScript();
-      if (scriptLoaded && (window as any).Razorpay && order.key_id && !order.key_id.includes('mock')) {
-        setCheckoutState('CHECKOUT_OPEN');
-        const prefillData: Record<string, string> = {};
-        if (customerName) prefillData.name = customerName;
-        if (customerEmail) prefillData.email = customerEmail;
-        if (customerPhone) prefillData.contact = customerPhone;
-
-        const options = {
-          key: order.key_id,
-          amount: order.amount_paise,
-          currency: order.currency,
-          name: 'Yuvaparipalan Foundation',
-          description: program.name,
-          order_id: order.gateway_order_id,
-          prefill: Object.keys(prefillData).length > 0 ? prefillData : undefined,
-          handler: async (response: any) => {
-            setCheckoutState('VERIFYING');
-            try {
-              const verifyRes = await verifyPayment(
-                {
-                  order_id: order.id,
-                  razorpay_order_id: response.razorpay_order_id || order.gateway_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                  payment_method: 'razorpay_checkout',
-                },
-                userAccountId
-              );
-              setFulfillment(verifyRes);
-              setCheckoutState('SUCCESS');
-            } catch (vErr: any) {
-              const failMsg = vErr.message || 'Payment verification failed.';
-              setCheckoutError(failMsg);
-              setCheckoutState('FAILED');
-              recordPaymentFailure(
-                {
-                  order_id: order.id,
-                  gateway_order_id: response.razorpay_order_id || order.gateway_order_id,
-                  gateway_payment_id: response.razorpay_payment_id,
-                  error_code: 'VERIFICATION_FAILED',
-                  error_description: failMsg,
-                  payment_method: 'razorpay_checkout',
-                  user_account_id: userAccountId || undefined,
-                },
-                userAccountId
-              ).catch((e) => console.warn('[ProgramDetailPage] Failure report notice:', e));
-            }
-          },
-          modal: {
-            ondismiss: () => {
-              setCheckoutState((curr) => (curr === 'SUCCESS' ? 'SUCCESS' : 'IDLE'));
-            },
-          },
-          theme: {
-            color: '#064e3b',
-          },
-        };
-
-        const rzpInstance = new (window as any).Razorpay(options);
-        rzpInstance.on('payment.failed', async (resp: any) => {
-          const errDetail = resp?.error || {};
-          const failDesc = errDetail.description || 'Payment was declined or failed.';
-          setCheckoutError(failDesc);
-          setCheckoutState('FAILED');
-
-          try {
-            await recordPaymentFailure(
-              {
-                order_id: order.id,
-                gateway_order_id: errDetail.metadata?.order_id || order.gateway_order_id,
-                gateway_payment_id: errDetail.metadata?.payment_id,
-                error_code: errDetail.code,
-                error_description: failDesc,
-                error_source: errDetail.source,
-                error_step: errDetail.step,
-                error_reason: errDetail.reason,
-                payment_method: 'razorpay_checkout',
-                metadata: {
-                  program_id: program.id,
-                  program_name: program.name,
-                },
-                user_account_id: userAccountId || undefined,
-              },
-              userAccountId
-            );
-          } catch (failLogErr) {
-            console.warn('[ProgramDetailPage] Failed to record failure:', failLogErr);
-          }
-        });
-        rzpInstance.open();
-      } else {
-        // Fallback or Test Environment Harness when external credentials are not yet configured
-        setCheckoutState('CHECKOUT_OPEN');
-      }
+      setCheckoutState('CHECKOUT_OPEN');
+      await launchRazorpayModal(order);
     } catch (err: any) {
       setCheckoutError(err.message || 'Failed to initiate payment.');
       setCheckoutState('FAILED');
     }
+  };
+
+  const launchRazorpayModal = async (order: CreateOrderResponse) => {
+    setCheckoutError(null);
+    const scriptLoaded = await loadRazorpayScript();
+    if (!scriptLoaded || !(window as any).Razorpay) {
+      setCheckoutError('Unable to load official Razorpay checkout SDK. Please check your internet connection or disable ad blockers and try again.');
+      return;
+    }
+    if (!order.key_id) {
+      setCheckoutError('Payment gateway configuration is missing key identifier. Please contact support.');
+      return;
+    }
+
+    const prefillData: Record<string, string> = {};
+    const cName = customer ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() : '';
+    const cPhone = customer?.phone_number || '';
+    const cEmail = (customer as any)?.email || '';
+    if (cName) prefillData.name = cName;
+    if (cEmail) prefillData.email = cEmail;
+    if (cPhone) prefillData.contact = cPhone;
+
+    const options = {
+      key: order.key_id,
+      amount: order.amount_paise,
+      currency: order.currency || 'INR',
+      name: 'Yuvaparipalan Foundation',
+      description: program ? program.name : 'Program Enrollment',
+      order_id: order.gateway_order_id,
+      prefill: Object.keys(prefillData).length > 0 ? prefillData : undefined,
+      theme: {
+        color: '#064e3b',
+      },
+      handler: async (response: any) => {
+        setCheckoutState('VERIFYING');
+        try {
+          const verifyRes = await verifyPayment(
+            {
+              order_id: order.id,
+              razorpay_order_id: response.razorpay_order_id || order.gateway_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              payment_method: 'razorpay_checkout',
+            },
+            userAccountId
+          );
+          setFulfillment(verifyRes);
+          setCheckoutState('SUCCESS');
+        } catch (vErr: any) {
+          const failMsg = vErr.message || 'Payment verification failed.';
+          setCheckoutError(failMsg);
+          setCheckoutState('FAILED');
+          recordPaymentFailure(
+            {
+              order_id: order.id,
+              gateway_order_id: response.razorpay_order_id || order.gateway_order_id,
+              gateway_payment_id: response.razorpay_payment_id,
+              error_code: 'VERIFICATION_FAILED',
+              error_description: failMsg,
+              payment_method: 'razorpay_checkout',
+              user_account_id: userAccountId || undefined,
+            },
+            userAccountId
+          ).catch((e) => console.warn('[ProgramDetailPage] Failure report notice:', e));
+        }
+      },
+      modal: {
+        ondismiss: () => {
+          setCheckoutState((curr) => (curr === 'SUCCESS' ? 'SUCCESS' : 'CHECKOUT_OPEN'));
+        },
+      },
+    };
+
+    const rzpInstance = new (window as any).Razorpay(options);
+    rzpInstance.on('payment.failed', async (resp: any) => {
+      const errDetail = resp?.error || {};
+      const failDesc = errDetail.description || 'Payment was declined or failed.';
+      setCheckoutError(failDesc);
+      setCheckoutState('FAILED');
+
+      try {
+        await recordPaymentFailure(
+          {
+            order_id: order.id,
+            gateway_order_id: errDetail.metadata?.order_id || order.gateway_order_id,
+            gateway_payment_id: errDetail.metadata?.payment_id,
+            error_code: errDetail.code,
+            error_description: failDesc,
+            error_source: errDetail.source,
+            error_step: errDetail.step,
+            error_reason: errDetail.reason,
+            payment_method: 'razorpay_checkout',
+            metadata: {
+              program_id: program?.id,
+              program_name: program?.name,
+            },
+            user_account_id: userAccountId || undefined,
+          },
+          userAccountId
+        );
+      } catch (failLogErr) {
+        console.warn('[ProgramDetailPage] Failed to record failure:', failLogErr);
+      }
+    });
+    rzpInstance.open();
   };
 
   useEffect(() => {
@@ -553,41 +564,27 @@ export const ProgramDetailPage: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Test Mode Simulation Confirmation (when external modal cannot open or test mode) */}
+                    {/* Live Razorpay Checkout Session Card */}
                     {checkoutState === 'CHECKOUT_OPEN' && createdOrder && (
-                      <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl space-y-3">
-                        <div className="flex items-center gap-2 text-amber-900 text-xs font-bold">
-                          <ShieldCheck className="w-4 h-4 text-amber-700 flex-shrink-0" />
-                          <span>Razorpay Test Mode Order Ready</span>
+                      <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-mono font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">
+                            Razorpay Live Checkout
+                          </span>
+                          <span className="font-mono text-xs font-bold text-slate-800">
+                            ₹{(createdOrder.amount_paise / 100).toLocaleString('en-IN')}
+                          </span>
                         </div>
-                        <p className="text-[11px] text-amber-800">
-                          Order <span className="font-mono font-bold">{createdOrder.gateway_order_id}</span> created for ₹{(createdOrder.amount_paise / 100).toLocaleString('en-IN')}.
+                        <p className="text-[11px] text-slate-700">
+                          Order <span className="font-mono font-bold text-emerald-900">{createdOrder.order_code || createdOrder.gateway_order_id}</span> is active. Please complete payment in the Razorpay popup.
                         </p>
                         <Button
-                          onClick={async () => {
-                            setCheckoutState('VERIFYING');
-                            try {
-                              const verifyRes = await verifyPayment(
-                                {
-                                  order_id: createdOrder.id,
-                                  razorpay_order_id: createdOrder.gateway_order_id,
-                                  razorpay_payment_id: `pay_test_${Date.now().toString().slice(-8)}`,
-                                  razorpay_signature: 'test_mode_simulated_signature',
-                                  payment_method: 'test_simulation',
-                                },
-                                userAccountId
-                              );
-                              setFulfillment(verifyRes);
-                              setCheckoutState('SUCCESS');
-                            } catch (vErr: any) {
-                              setCheckoutError(vErr.message || 'Payment verification failed.');
-                              setCheckoutState('FAILED');
-                            }
-                          }}
+                          onClick={() => launchRazorpayModal(createdOrder)}
                           variant="primary"
-                          className="w-full py-2.5 bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs rounded-xl"
+                          className="w-full py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
                         >
-                          Confirm Test Checkout Verification
+                          <Lock className="w-3.5 h-3.5" />
+                          <span>Reopen Razorpay Payment Window</span>
                         </Button>
                       </div>
                     )}
