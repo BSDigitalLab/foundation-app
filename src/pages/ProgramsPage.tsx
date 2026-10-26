@@ -354,6 +354,7 @@ export const ProgramsPage: React.FC = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {filteredPublished.map((program, idx) => {
                   const isChangepreneur =
+                    program.program_code === 'CCPAM100' ||
                     program.program_code === 'CCPM100' ||
                     program.public_slug.includes('changepreneur');
                   const isCESP =

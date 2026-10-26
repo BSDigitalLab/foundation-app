@@ -48,6 +48,7 @@ describe('Career Excellence & Scholarship Program (CESP100) Verification Suite',
   describe('Route Resolution & Catalog Routing Logic', () => {
     function resolveProgramTargetUrl(program: { program_code: string; public_slug: string }): string {
       const isChangepreneur =
+        program.program_code === 'CCPAM100' ||
         program.program_code === 'CCPM100' ||
         program.public_slug.includes('changepreneur');
       const isCESP =
@@ -67,12 +68,18 @@ describe('Career Excellence & Scholarship Program (CESP100) Verification Suite',
       assert.strictEqual(url, '/programs/career-excellence-scholarship-program');
     });
 
-    it('routes CCPM100 to dedicated /programs/changepreneur-circle', () => {
-      const url = resolveProgramTargetUrl({
+    it('routes canonical CCPAM100 and legacy CCPM100 to dedicated /programs/changepreneur-circle', () => {
+      const urlCanonical = resolveProgramTargetUrl({
+        program_code: 'CCPAM100',
+        public_slug: 'changepreneur-circle-premium-annual-membership',
+      });
+      assert.strictEqual(urlCanonical, '/programs/changepreneur-circle');
+
+      const urlLegacy = resolveProgramTargetUrl({
         program_code: 'CCPM100',
         public_slug: 'changepreneur-circle-premium-membership',
       });
-      assert.strictEqual(url, '/programs/changepreneur-circle');
+      assert.strictEqual(urlLegacy, '/programs/changepreneur-circle');
     });
 
     it('routes other programs to dynamic /programs/:slug', () => {

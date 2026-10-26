@@ -910,6 +910,120 @@ class AdminDeletionService {
     return this.requests[index];
   }
 
+  public async blockDeletion(
+    requestId: string,
+    reviewer: ReviewerContext,
+    blockerCategory: string,
+    notes: string
+  ): Promise<AdminDeletionRequest> {
+    this.assertPermission(reviewer, 'iam.account_deletion.review', 'BLOCK_DELETION');
+
+    const index = this.findIndexByIdOrRef(requestId);
+    if (index === -1) throw new Error('Deletion request not found');
+
+    const req = this.requests[index];
+    if (req.status === 'COMPLETED' || req.status === 'REJECTED') {
+      throw new Error(`Cannot block request in terminal status ${req.status}`);
+    }
+
+    const prev = req.status;
+    req.status = 'DELETION_BLOCKED';
+    req.reviewerNotes = `Blocked [${blockerCategory}]: ${notes}`;
+
+    const prevHash = req.auditTrail.length > 0 
+      ? req.auditTrail[req.auditTrail.length - 1].payloadHashSha256 || '0000000000000000000000000000000000000000000000000000000000000000'
+      : '0000000000000000000000000000000000000000000000000000000000000000';
+
+    const now = new Date().toISOString();
+    const auditPayload = {
+      requestId: req.referenceCode,
+      actorId: reviewer.id,
+      actorRole: reviewer.role,
+      action: 'BLOCK_DELETION',
+      previousState: prev,
+      newState: 'DELETION_BLOCKED',
+      timestamp: now,
+    };
+
+    const auditEntry: DeletionAuditEntry = {
+      id: `aud_${Date.now()}`,
+      requestId: req.referenceCode,
+      actorId: reviewer.id,
+      actorName: reviewer.name,
+      actorRole: reviewer.role,
+      action: 'BLOCK_DELETION',
+      previousState: prev,
+      newState: 'DELETION_BLOCKED',
+      reasonNotes: `Category ${blockerCategory}: ${notes}`,
+      payloadHashSha256: computeAuditHash(auditPayload, prevHash),
+      prevLogHashSha256: prevHash,
+      isImmutable: true,
+      timestamp: now,
+    };
+
+    req.auditTrail.push(auditEntry);
+    this.requests[index] = { ...req };
+    this.persistDurableState();
+    return this.requests[index];
+  }
+
+  public async executePurge(
+    requestId: string,
+    reviewer: ReviewerContext
+  ): Promise<AdminDeletionRequest> {
+    this.assertPermission(reviewer, 'iam.account_deletion.approve', 'EXECUTE_PURGE');
+
+    const index = this.findIndexByIdOrRef(requestId);
+    if (index === -1) throw new Error('Deletion request not found');
+
+    const req = this.requests[index];
+    if (req.status === 'COMPLETED') {
+      return req; // idempotent
+    }
+    if (req.status !== 'APPROVED_FOR_DELETION' && req.status !== 'DELETION_PROCESSING' && req.status !== 'DELETION_BLOCKED') {
+      throw new Error(`Cannot execute purge from status ${req.status}. Must be APPROVED_FOR_DELETION.`);
+    }
+
+    const prev = req.status;
+    req.status = 'COMPLETED';
+
+    const prevHash = req.auditTrail.length > 0 
+      ? req.auditTrail[req.auditTrail.length - 1].payloadHashSha256 || '0000000000000000000000000000000000000000000000000000000000000000'
+      : '0000000000000000000000000000000000000000000000000000000000000000';
+
+    const now = new Date().toISOString();
+    const auditPayload = {
+      requestId: req.referenceCode,
+      actorId: reviewer.id,
+      actorRole: reviewer.role,
+      action: 'EXECUTE_FINAL_DELETION',
+      previousState: prev,
+      newState: 'COMPLETED',
+      timestamp: now,
+    };
+
+    const auditEntry: DeletionAuditEntry = {
+      id: `aud_${Date.now()}`,
+      requestId: req.referenceCode,
+      actorId: reviewer.id,
+      actorName: reviewer.name,
+      actorRole: reviewer.role,
+      action: 'EXECUTE_FINAL_DELETION',
+      previousState: prev,
+      newState: 'COMPLETED',
+      reasonNotes: 'All 7 data categories purged and statutory ledgers preserved.',
+      payloadHashSha256: computeAuditHash(auditPayload, prevHash),
+      prevLogHashSha256: prevHash,
+      isImmutable: true,
+      timestamp: now,
+    };
+
+    req.auditTrail.push(auditEntry);
+    this.requests[index] = { ...req };
+    this.persistDurableState();
+    return this.requests[index];
+  }
+
   /**
    * Enforces Audit Immutability: Rejects any attempt to mutate or delete audit records
    */

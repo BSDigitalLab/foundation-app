@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { SEOHead } from '../components/common/SEOHead';
 import { FadeIn } from '../components/motion/FadeIn';
@@ -41,6 +41,11 @@ import {
   CreateOrderResponse,
   VerifyPaymentResponse
 } from '../services/paymentService';
+import {
+  resolveProgramByCode,
+  PublicProgram,
+  ProgramResolutionError
+} from '../services/programResolutionService';
 import { useCustomerAuthStore } from '../stores/useCustomerAuthStore';
 
 interface ApplicationModalProps {
@@ -49,9 +54,6 @@ interface ApplicationModalProps {
 }
 
 type ModalStep = 'FORM' | 'CREATING_ORDER' | 'PAYMENT' | 'VERIFYING' | 'SUCCESS';
-
-// Authoritative Program UUID for CESP100
-const CESP100_PROGRAM_ID = 'd7180ba6-a22d-4330-85d1-8dfa9e321277';
 
 const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) => {
   const [fullName, setFullName] = useState('');
@@ -68,6 +70,11 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
   const [createdOrder, setCreatedOrder] = useState<CreateOrderResponse | null>(null);
   const [fulfillment, setFulfillment] = useState<VerifyPaymentResponse | null>(null);
 
+  // Dynamic Authoritative Program Resolution State
+  const [resolvedProgram, setResolvedProgram] = useState<PublicProgram | null>(null);
+  const [isResolvingProgram, setIsResolvingProgram] = useState<boolean>(true);
+  const [programResolutionError, setProgramResolutionError] = useState<string | null>(null);
+
   // Razorpay Payment Instruments & Modes State
   const [paymentCategory, setPaymentCategory] = useState<'upi' | 'card' | 'netbanking' | 'wallet'>('upi');
   const [upiMode, setUpiMode] = useState<'app' | 'id' | 'qr'>('app');
@@ -82,6 +89,37 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const { userAccountId } = useCustomerAuthStore();
+
+  // Authoritatively Resolve CESP100 on Modal Open
+  useEffect(() => {
+    let isMounted = true;
+    if (isOpen) {
+      setIsResolvingProgram(true);
+      setProgramResolutionError(null);
+      resolveProgramByCode('CESP100', {
+        fallbackSlugs: ['career-excellence-scholarship-program', 'career-excellence-scholarship', 'cesp100']
+      })
+        .then((program) => {
+          if (isMounted) {
+            setResolvedProgram(program);
+            setIsResolvingProgram(false);
+          }
+        })
+        .catch((err: any) => {
+          if (isMounted) {
+            console.warn('[CareerExcellenceScholarshipPage] Program resolution note:', err);
+            const msg = err instanceof ProgramResolutionError && err.code === 'PROGRAM_UNPUBLISHED'
+              ? 'Admissions for this program are currently pending publication.'
+              : 'Admissions for the upcoming Career Excellence & Scholarship Program (CESP100) cohort are currently being scheduled by the Academic Advisory Board.';
+            setProgramResolutionError(msg);
+            setIsResolvingProgram(false);
+          }
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -110,50 +148,41 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
       return;
     }
 
+    if (!resolvedProgram || !resolvedProgram.id) {
+      setErrorMsg(
+        programResolutionError ||
+        'Admissions for the upcoming CESP100 cohort are currently being scheduled. Public online fee checkout is not open.'
+      );
+      return;
+    }
+
     setModalStep('CREATING_ORDER');
 
-    // 1. Authoritative Server-Side Order Creation
+    // 1. Authoritative Server-Side Order Creation (Zero Mock Orders Allowed)
     try {
-      let order: CreateOrderResponse;
-      try {
-        order = await createPaymentOrder(
-          CESP100_PROGRAM_ID,
-          userAccountId,
-          {
-            customer_phone: trimmedPhone,
-            customer_name: trimmedName,
-            customer_email: trimmedEmail,
-            notes: {
-              program_code: 'CESP100',
-              state,
-              district,
-              education_level: educationLevel,
-              institution: institution.trim() || 'Not specified',
-            }
+      const order = await createPaymentOrder(
+        resolvedProgram.id,
+        userAccountId,
+        {
+          customer_phone: trimmedPhone,
+          customer_name: trimmedName,
+          customer_email: trimmedEmail,
+          notes: {
+            program_code: resolvedProgram.program_code,
+            program_name: resolvedProgram.name,
+            state,
+            district,
+            education_level: educationLevel,
+            institution: institution.trim() || 'Not specified',
           }
-        );
-      } catch (backendErr: any) {
-        // Resilient fallback if backend gateway credentials are not yet configured on the container
-        console.warn('Backend payment order creation notice:', backendErr.message);
-        order = {
-          id: `ord_cesp_${Date.now()}`,
-          order_code: `ORD-CESP-${Math.floor(100000 + Math.random() * 900000)}`,
-          gateway_order_id: `order_cesp_live_${Date.now()}`,
-          amount_paise: 54900,
-          currency: 'INR',
-          receipt: `rcpt_cesp_${Date.now()}`,
-          status: 'created',
-          program_id: CESP100_PROGRAM_ID,
-          program_title: 'Career Excellence & Scholarship Program',
-          key_id: 'rzp_test_cesp_gateway',
-        };
-      }
+        }
+      );
 
       setCreatedOrder(order);
 
       // 2. Attempt official Razorpay Checkout SDK Modal Launch
       const scriptLoaded = await loadRazorpayScript();
-      const hasLiveKey = order.key_id && !order.key_id.includes('mock') && !order.key_id.includes('test_cesp');
+      const hasLiveKey = Boolean(order.key_id && !order.key_id.includes('mock') && !order.key_id.includes('test_cesp'));
 
       if (scriptLoaded && (window as any).Razorpay && hasLiveKey) {
         setModalStep('PAYMENT');
@@ -299,6 +328,13 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
 
   const handleExecutePayment = async () => {
     if (!createdOrder) return;
+
+    // Disallow simulated test payments in production
+    if (!import.meta.env.DEV) {
+      setErrorMsg('Direct payment simulation is disabled in production. Please use the official Razorpay checkout.');
+      return;
+    }
+
     setIsProcessingPayment(true);
     setModalStep('VERIFYING');
     setErrorMsg(null);
@@ -383,18 +419,44 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
           <div>
             <div className="mb-6 space-y-1">
               <div className="flex items-center gap-2">
-                <Badge variant="emerald">Step 1 of 2: Candidate Details</Badge>
+                <Badge variant="emerald">{resolvedProgram?.program_code || 'CESP100'}</Badge>
                 <span className="text-xs font-mono font-bold text-emerald-900 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
-                  ₹549 Inclusive of Tax
+                  {resolvedProgram?.commercials?.subscription_price
+                    ? `₹${resolvedProgram.commercials.subscription_price.toLocaleString('en-IN')} Inclusive of Tax`
+                    : '₹549 Inclusive of Tax'}
                 </span>
+                {isResolvingProgram && (
+                  <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin text-emerald-600" />
+                    Checking admissions status...
+                  </span>
+                )}
               </div>
               <h3 className="font-heading font-extrabold text-2xl text-slate-900">
-                Enroll in Career Excellence & Scholarship Program
+                {resolvedProgram?.name || 'Enroll in Career Excellence & Scholarship Program'}
               </h3>
               <p className="text-xs text-slate-600">
                 Complete your enrollment to activate the Eduzet Aptitude Assessment, 180-day Palana Neurosync Vikas subscription, AI workshops, and mentorship.
               </p>
             </div>
+
+            {programResolutionError && (
+              <div className="mb-5 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs leading-relaxed space-y-2">
+                <div className="flex items-center gap-2 font-bold text-amber-800">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                  <span>Admissions Scheduling Announcement</span>
+                </div>
+                <p>
+                  {programResolutionError}
+                </p>
+                <p className="text-[11px] text-amber-700">
+                  To register for priority batch allocation, please reach out to our academic counsellors at{' '}
+                  <a href="mailto:admissions@yuvaparipalan.org" className="underline font-bold text-emerald-800">
+                    admissions@yuvaparipalan.org
+                  </a>.
+                </p>
+              </div>
+            )}
 
             {errorMsg && (
               <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
@@ -520,10 +582,17 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
                 <Button
                   type="submit"
                   variant="primary"
-                  className="px-7 bg-[#15803d] hover:bg-[#166534] text-white font-bold text-xs flex items-center gap-1.5 shadow-md"
+                  disabled={!resolvedProgram}
+                  className="px-7 bg-[#15803d] hover:bg-[#166534] disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-bold text-xs flex items-center gap-1.5 shadow-md"
                 >
-                  <span>Proceed to Payment (₹549)</span>
-                  <ArrowRight className="w-4 h-4 text-emerald-100" />
+                  <span>
+                    {isResolvingProgram
+                      ? 'Checking Admissions Status...'
+                      : !resolvedProgram
+                      ? 'Admissions Scheduling in Progress'
+                      : 'Proceed to Payment (₹549)'}
+                  </span>
+                  {resolvedProgram && <ArrowRight className="w-4 h-4 text-emerald-100" />}
                 </Button>
               </div>
             </form>

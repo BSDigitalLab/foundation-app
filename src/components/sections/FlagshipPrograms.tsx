@@ -127,6 +127,7 @@ export const FlagshipPrograms: React.FC = () => {
           ) : programs.length > 0 ? (
             programs.map((program, index) => {
               const isChangepreneur =
+                program.program_code === 'CCPAM100' ||
                 program.program_code === 'CCPM100' ||
                 program.public_slug.includes('changepreneur');
               const isCESP =

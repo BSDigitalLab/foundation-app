@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { SEOHead } from '../components/common/SEOHead';
 import { FadeIn } from '../components/motion/FadeIn';
@@ -47,6 +47,11 @@ import {
   CreateOrderResponse,
   VerifyPaymentResponse
 } from '../services/paymentService';
+import {
+  resolveProgramByCode,
+  PublicProgram,
+  ProgramResolutionError
+} from '../services/programResolutionService';
 import { useCustomerAuthStore } from '../stores/useCustomerAuthStore';
 
 interface ApplicationModalProps {
@@ -55,8 +60,6 @@ interface ApplicationModalProps {
 }
 
 type ModalStep = 'FORM' | 'CREATING_ORDER' | 'PAYMENT' | 'VERIFYING' | 'SUCCESS';
-
-const CCPM100_PROGRAM_ID = '92d72ed2-9e24-4355-a3f7-5a1277fbf025';
 
 const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) => {
   const [fullName, setFullName] = useState('');
@@ -72,6 +75,11 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
   const [createdOrder, setCreatedOrder] = useState<CreateOrderResponse | null>(null);
   const [fulfillment, setFulfillment] = useState<VerifyPaymentResponse | null>(null);
 
+  // Dynamic Authoritative Program Resolution State
+  const [resolvedProgram, setResolvedProgram] = useState<PublicProgram | null>(null);
+  const [isResolvingProgram, setIsResolvingProgram] = useState<boolean>(true);
+  const [programResolutionError, setProgramResolutionError] = useState<string | null>(null);
+
   // Razorpay Payment Instruments & Modes State
   const [paymentCategory, setPaymentCategory] = useState<'upi' | 'card' | 'netbanking' | 'wallet'>('upi');
   const [upiMode, setUpiMode] = useState<'app' | 'id' | 'qr'>('app');
@@ -86,6 +94,38 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const { userAccountId } = useCustomerAuthStore();
+
+  // Authoritative Program Dynamic Resolution on Modal Open
+  useEffect(() => {
+    let isMounted = true;
+    if (isOpen) {
+      setIsResolvingProgram(true);
+      setProgramResolutionError(null);
+      resolveProgramByCode('CCPAM100', {
+        aliasCodes: ['CCPM100'],
+        fallbackSlugs: ['changepreneur-circle-premium-annual-membership', 'changepreneur-circle']
+      })
+        .then((program) => {
+          if (isMounted) {
+            setResolvedProgram(program);
+            setIsResolvingProgram(false);
+          }
+        })
+        .catch((err: any) => {
+          if (isMounted) {
+            console.error('[ChangepreneurCirclePage] Program resolution failed:', err);
+            const msg = err instanceof ProgramResolutionError
+              ? err.message
+              : 'Unable to resolve authoritative program details from catalog.';
+            setProgramResolutionError(msg);
+            setIsResolvingProgram(false);
+          }
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -114,19 +154,28 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
       return;
     }
 
+    if (!resolvedProgram || !resolvedProgram.id) {
+      setErrorMsg(
+        programResolutionError || 
+        'Unable to verify active published membership program. Please refresh or contact support@yuvaparipalan.org.'
+      );
+      return;
+    }
+
     setModalStep('CREATING_ORDER');
 
-    // 1. Authoritative Server-Side Order Creation
+    // 1. Authoritative Server-Side Order Creation using Resolved Program ID & Canonical Code
     try {
       const order = await createPaymentOrder(
-        CCPM100_PROGRAM_ID,
+        resolvedProgram.id,
         userAccountId,
         {
           customer_phone: trimmedPhone,
           customer_name: trimmedName,
           customer_email: trimmedEmail,
           notes: {
-            program_code: 'CCPM100',
+            program_code: resolvedProgram.program_code,
+            program_name: resolvedProgram.name,
             state,
             district,
             profession: profession.trim() || 'Member',
@@ -138,7 +187,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
 
       // 2. Attempt official Razorpay Checkout SDK Modal Launch
       const scriptLoaded = await loadRazorpayScript();
-      const hasLiveKey = order.key_id && !order.key_id.includes('mock');
+      const hasLiveKey = Boolean(order.key_id && !order.key_id.includes('mock'));
 
       if (scriptLoaded && (window as any).Razorpay && hasLiveKey) {
         setModalStep('PAYMENT');
@@ -147,7 +196,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
           amount: order.amount_paise,
           currency: order.currency || 'INR',
           name: 'Yuvaparipalan Foundation',
-          description: 'Changepreneur Circle Premium Membership (₹30,000)',
+          description: resolvedProgram.name || 'Changepreneur Circle Premium Membership (₹30,000)',
           order_id: order.gateway_order_id,
           prefill: {
             name: trimmedName,
@@ -176,6 +225,8 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
               confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
 
               // Dispatch official Tax Invoice & Payment Confirmation Email
+              const canonicalCode = resolvedProgram?.program_code || 'CCPAM100';
+              const programTitle = resolvedProgram?.name || 'Changepreneur Circle Premium Annual Membership';
               sendSubmissionEmail({
                 formType: 'changepreneur_payment_confirmed',
                 formData: {
@@ -186,7 +237,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
                   district,
                   profession: profession.trim() || 'Founder / Entrepreneur',
                   notes: notes.trim() || 'Direct Enrollment',
-                  program: 'Changepreneur Circle Annual Membership (CCPM100)',
+                  program: `${programTitle} (${canonicalCode})`,
                   orderCode: verifyRes?.order_code || order?.order_code || order?.id,
                   gatewayOrderId: order?.gateway_order_id,
                   paymentId: response.razorpay_payment_id || verifyRes?.gateway_payment_id,
@@ -242,7 +293,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
                 error_reason: errData.reason,
                 payment_method: 'razorpay_checkout',
                 metadata: {
-                  program: 'CCPM100',
+                  program: resolvedProgram?.program_code || 'CCPAM100',
                   fullName: trimmedName,
                 },
                 user_account_id: order.user_account_id || userAccountId || undefined,
@@ -255,7 +306,12 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
         });
         rzp.open();
       } else {
-        // Test Mode or Gateway Verification Stage
+        // In production, require live Razorpay checkout
+        if (!hasLiveKey || !scriptLoaded) {
+          setErrorMsg(
+            'Unable to load the secure Razorpay payment modal. Please check your network connection or disable script blockers and try again.'
+          );
+        }
         setModalStep('PAYMENT');
       }
     } catch (err: any) {
@@ -284,12 +340,21 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
 
   const handleExecutePayment = async () => {
     if (!createdOrder) return;
+
+    // Disallow simulated test payments in production
+    if (!import.meta.env.DEV) {
+      setErrorMsg('Direct payment simulation is disabled in production. Please use the official Razorpay checkout.');
+      return;
+    }
+
     setIsProcessingPayment(true);
     setModalStep('VERIFYING');
     setErrorMsg(null);
 
     const instrumentLabel = getSelectedInstrumentLabel();
     const simPaymentId = `pay_${paymentCategory.slice(0, 3)}_${Date.now()}`;
+    const canonicalCode = resolvedProgram?.program_code || 'CCPAM100';
+    const programTitle = resolvedProgram?.name || 'Changepreneur Circle Premium Annual Membership';
 
     try {
       // Execute authoritative cryptographic payment verification against backend
@@ -319,7 +384,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
           district,
           profession: profession.trim() || 'Founder / Entrepreneur',
           notes: notes.trim() || 'Direct Enrollment',
-          program: 'Changepreneur Circle Annual Membership (CCPM100)',
+          program: `${programTitle} (${canonicalCode})`,
           orderCode: verifyRes?.order_code || createdOrder?.order_code || createdOrder?.id,
           gatewayOrderId: createdOrder?.gateway_order_id,
           paymentId: simPaymentId,
@@ -460,18 +525,33 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
           <div>
             <div className="mb-6 space-y-1">
               <div className="flex items-center gap-2">
-                <Badge variant="emerald">Step 1 of 2: Member Details</Badge>
+                <Badge variant="emerald">{resolvedProgram?.program_code || 'CCPAM100'}</Badge>
                 <span className="text-xs font-mono font-bold text-amber-900 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300">
-                  ₹30,000 / Year
+                  {resolvedProgram?.commercials?.subscription_price
+                    ? `₹${resolvedProgram.commercials.subscription_price.toLocaleString('en-IN')} / Year`
+                    : '₹30,000 / Year'}
                 </span>
+                {isResolvingProgram && (
+                  <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin text-emerald-600" />
+                    Resolving catalog...
+                  </span>
+                )}
               </div>
               <h3 className="font-heading font-extrabold text-2xl text-slate-900">
-                Join Changepreneur Circle
+                {resolvedProgram?.name || 'Join Changepreneur Circle'}
               </h3>
               <p className="text-xs text-slate-600">
                 Provide your registration details below to proceed to the secure Razorpay payment gateway.
               </p>
             </div>
+
+            {programResolutionError && (
+              <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{programResolutionError}</span>
+              </div>
+            )}
 
             {errorMsg && (
               <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">

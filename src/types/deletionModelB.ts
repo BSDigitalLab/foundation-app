@@ -12,6 +12,7 @@ export type DeletionLifecycleState =
   | 'UNDER_REVIEW'
   | 'APPROVED_FOR_DELETION'
   | 'DELETION_PROCESSING'
+  | 'DELETION_BLOCKED'
   | 'COMPLETED'
   | 'VERIFICATION_FAILED'
   | 'REJECTED'
