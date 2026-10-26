@@ -1897,7 +1897,7 @@ export const ChangepreneurCirclePage: React.FC = () => {
                 </div>
               </FadeIn>
 
-              {/* Second Prize: Electric Scooter (Ola) */}
+              {/* Second Prize: Electric Scooter */}
               <FadeIn direction="up" delay={0.1}>
                 <div className="group p-5 rounded-3xl bg-[#fafaf7] border border-emerald-900/20 hover:border-emerald-600 hover:shadow-xl transition-all h-full flex flex-col justify-between text-left space-y-4 relative overflow-hidden">
                   <div className="space-y-3">
@@ -1911,15 +1911,15 @@ export const ChangepreneurCirclePage: React.FC = () => {
                     {/* Realistic Product Image */}
                     <div className="w-full aspect-[4/3] rounded-2xl overflow-hidden bg-white border border-emerald-900/10 shadow-sm relative">
                       <img
-                        src="/prizes/electric_scooter_ola.jpg"
-                        alt="Second Prize Electric Scooter Ola"
+                        src="/prizes/electric_scooter.jpg"
+                        alt="Second Prize Electric Scooter"
                         className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                         loading="lazy"
                       />
                     </div>
 
                     <h3 className="font-heading font-black text-xl text-slate-950 group-hover:text-emerald-900 transition-colors">
-                      Electric Scooter (Ola)
+                      Electric Scooter
                     </h3>
                   </div>
 
