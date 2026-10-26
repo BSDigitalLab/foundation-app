@@ -672,12 +672,12 @@ describe('Directive 006 & 007: Model B Admin-Reviewed Account Deletion Architect
       const result = adminDeletionService.evaluateWormArchivalCriteria();
       assert.strictEqual(result.status, 'BLOCKED');
       assert.strictEqual(result.wormLockVerified, false);
-      assert.ok(result.blockerReason?.includes('External WORM compliant storage bucket'));
+      assert.ok(result.blockerReason?.includes('Supabase Storage immutable audit vault bucket'));
     });
 
     it('verifies export completeness and cryptographic chaining when WORM compliance is simulated', () => {
       const result = adminDeletionService.evaluateWormArchivalCriteria(
-        's3://yp-audit-vault-worm-staging/batches/20261025/',
+        'supabase://platform-audit-vault/batches/20261025/',
         true
       );
       assert.strictEqual(result.status, 'PASS');

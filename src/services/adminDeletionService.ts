@@ -1158,7 +1158,7 @@ class AdminDeletionService {
   /**
    * Evaluates compliance against Directive 012 WORM audit archival acceptance criteria:
    * 1. Export completeness (all audit records chained)
-   * 2. Destination compliance lock (Object Lock in Compliance Mode)
+   * 2. Destination compliance lock (Supabase Storage platform-audit-vault append-only lock)
    * 3. Retention duration (>= 8 statutory years)
    * 4. Failure handling & replay buffer
    */
@@ -1175,7 +1175,7 @@ class AdminDeletionService {
         tamperDetected: false,
         wormLockVerified: false,
         status: 'BLOCKED',
-        blockerReason: 'External WORM compliant storage bucket (e.g. AWS S3 Object Lock / Compliance Vault) is pending infrastructure provisioning on staging.',
+        blockerReason: 'Supabase Storage immutable audit vault bucket (platform-audit-vault) is pending storage configuration on staging.',
       };
     }
 
