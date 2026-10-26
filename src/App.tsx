@@ -51,10 +51,11 @@ const PageLoader: React.FC = () => (
 // App Layout Controller: Hides general Navbar & Footer on standalone routes (/delete-account and /admin/*)
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { pathname } = useLocation();
-  const isStandalone = pathname === '/delete-account' || pathname.startsWith('/admin');
+  const isDeleteAccount = pathname === '/delete-account';
+  const isStandalone = isDeleteAccount || pathname.startsWith('/admin');
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white font-sans">
+    <div className={`min-h-screen flex flex-col selection:bg-emerald-500 selection:text-white font-sans ${isDeleteAccount ? 'bg-[#f4f8f5] text-slate-900' : 'bg-slate-950 text-slate-100'}`}>
       {!isStandalone && <Navbar />}
       <CustomerAuthModal />
       <div className="flex-grow">
