@@ -321,10 +321,13 @@ describe('Legal Centre & Platform Governance Architecture Suite', () => {
       );
     });
 
-    it('verifies additional legal links in footer bottom bar', () => {
-      assert.ok(footerContent.includes('to="/child-safeguarding"'), 'Footer must link to child-safeguarding');
-      assert.ok(footerContent.includes('to="/posh"'), 'Footer must link to posh');
-      assert.ok(footerContent.includes('to="/delete-account"'), 'Footer must link to delete-account');
+    it('verifies footer bottom bar preserves core legal links and delegates specialized policies to Legal Centre', () => {
+      assert.ok(footerContent.includes('to="/legal-centre"'), 'Footer must link to legal-centre');
+      assert.ok(footerContent.includes('to="/privacy-policy"'), 'Footer must link to privacy-policy');
+      assert.ok(footerContent.includes('to="/terms-and-conditions"'), 'Footer must link to terms-and-conditions');
+      assert.ok(!footerContent.includes('to="/child-safeguarding"'), 'Footer bottom bar excludes direct child-safeguarding link');
+      assert.ok(!footerContent.includes('to="/posh"'), 'Footer bottom bar excludes direct posh link');
+      assert.ok(!footerContent.includes('to="/delete-account"'), 'Footer bottom bar excludes direct delete-account link');
     });
   });
 

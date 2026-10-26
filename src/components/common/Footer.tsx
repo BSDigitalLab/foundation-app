@@ -174,27 +174,6 @@ export const Footer: React.FC = () => {
             >
               Terms & Conditions
             </Link>
-            <span className="text-emerald-800/80">|</span>
-            <Link 
-              to="/child-safeguarding" 
-              className="hover:text-white transition-colors"
-            >
-              Child Safeguarding
-            </Link>
-            <span className="text-emerald-800/80">|</span>
-            <Link 
-              to="/posh" 
-              className="hover:text-white transition-colors"
-            >
-              POSH Policy
-            </Link>
-            <span className="text-emerald-800/80">|</span>
-            <Link 
-              to="/delete-account" 
-              className="hover:text-rose-400 transition-colors"
-            >
-              Delete Account
-            </Link>
           </div>
         </div>
       </div>
