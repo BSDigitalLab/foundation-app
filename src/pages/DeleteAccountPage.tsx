@@ -194,7 +194,7 @@ export const DeleteAccountPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Step A: Verify OTP
+      // Step A: Verify OTP (fail closed: only an explicit backend confirmation proceeds)
       let verified = false;
       try {
         const res = await fetch(`${apiBase}/api/v1/privacy/preferences/verify`, {
@@ -202,24 +202,27 @@ export const DeleteAccountPage: React.FC = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ challenge_id: challengeId, otp: otpCode.trim() }),
         });
-        const data = await res.json();
-        if (res.ok && data.verified) {
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.verified === true) {
           verified = true;
-        } else if (!res.ok && data.detail) {
-          setErrorMessage(data.detail);
+        } else {
+          setErrorMessage(
+            (typeof data.detail === 'string' && data.detail) ||
+              'The verification code could not be confirmed. Please check the code and try again.'
+          );
           setIsLoading(false);
           return;
-        } else {
-          verified = true;
         }
       } catch {
-        verified = true;
+        setErrorMessage('We could not verify your code due to a network error. Please try again.');
+        setIsLoading(false);
+        return;
       }
 
       setIsOtpVerified(verified);
 
       // Step B: Submit deletion request
-      await executeDeletionSubmission();
+      await executeDeletionSubmission(verified);
     } catch (err: any) {
       setErrorMessage(err.message || 'An error occurred during verification.');
       setIsLoading(false);
@@ -227,7 +230,7 @@ export const DeleteAccountPage: React.FC = () => {
   };
 
   // 3. Submit Account Deletion Request under Model B
-  const executeDeletionSubmission = async () => {
+  const executeDeletionSubmission = async (otpConfirmed: boolean = isOtpVerified) => {
     const targetIdentifier = isAuthenticated && customer?.phone_number
       ? customer.phone_number
       : identifier.trim();
@@ -266,7 +269,7 @@ export const DeleteAccountPage: React.FC = () => {
         displayName: customer ? `${customer.first_name} ${customer.last_name}` : undefined,
         sourceApp,
         challengeId: challengeId || undefined,
-        isOtpVerified: isAuthenticated || isOtpVerified || true,
+        isOtpVerified: isAuthenticated || otpConfirmed,
         reasonCode,
         comment: feedbackComment,
       });
