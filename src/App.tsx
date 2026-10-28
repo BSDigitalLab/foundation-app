@@ -28,6 +28,7 @@ const AcceptableUsePage = lazy(() => import('./pages/AcceptableUsePage').then((m
 const UnsubscribePage = lazy(() => import('./pages/UnsubscribePage').then((m) => ({ default: m.UnsubscribePage })));
 const DeleteAccountPage = lazy(() => import('./pages/DeleteAccountPage').then((m) => ({ default: m.DeleteAccountPage })));
 const AdminAccountDeletionPage = lazy(() => import('./pages/AdminAccountDeletionPage').then((m) => ({ default: m.AdminAccountDeletionPage })));
+const ShortLinkResolverPage = lazy(() => import('./pages/ShortLinkResolverPage').then((m) => ({ default: m.ShortLinkResolverPage })));
 
 // Scroll To Top on Route Change
 const ScrollToTop: React.FC = () => {
@@ -82,8 +83,16 @@ export const App: React.FC = () => {
             <Route path="/" element={<HomePage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/programs" element={<ProgramsPage />} />
+            {/* Branded Short Links & Campaign Redirects */}
+            <Route path="/s/:code" element={<ShortLinkResolverPage />} />
+            <Route path="/c/:code" element={<ShortLinkResolverPage />} />
+
+            {/* Changepreneur Circle Dedicated Landing Routes & Canonical Aliases */}
             <Route path="/programs/changepreneur-circle" element={<ChangepreneurCirclePage />} />
             <Route path="/programs/changepreneur-circle-premium-annual-membership" element={<ChangepreneurCirclePage />} />
+            <Route path="/programs/ccpam100" element={<ChangepreneurCirclePage />} />
+            <Route path="/programs/ccpm100" element={<ChangepreneurCirclePage />} />
+            <Route path="/programs/09ecaeaa-a525-4262-966c-dd34bc54305f" element={<ChangepreneurCirclePage />} />
             <Route path="/programs/career-excellence-scholarship-program" element={<CareerExcellenceScholarshipPage />} />
             <Route path="/programs/cesp" element={<CareerExcellenceScholarshipPage />} />
             <Route path="/programs/:slug" element={<ProgramDetailPage />} />

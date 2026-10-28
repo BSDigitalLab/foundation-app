@@ -1,6 +1,14 @@
 {
     "rewrites": [
         {
+            "source": "/s/:code",
+            "destination": "https://api.yuvaparipalan.com/s/:code"
+        },
+        {
+            "source": "/c/:code",
+            "destination": "https://api.yuvaparipalan.com/c/:code"
+        },
+        {
             "source": "/(.*)",
             "destination": "/"
         }

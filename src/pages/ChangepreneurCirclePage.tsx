@@ -4,6 +4,7 @@ import { SEOHead } from '../components/common/SEOHead';
 import { FadeIn } from '../components/motion/FadeIn';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { useLocation } from 'react-router-dom';
 import { PhoneInput } from '../components/ui/PhoneInput';
 import { DistrictAutocomplete } from '../components/ui/DistrictAutocomplete';
 import { sendSubmissionEmail } from '../services/emailService';
@@ -89,6 +90,45 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
 
 
   const { userAccountId } = useCustomerAuthStore();
+  const location = useLocation();
+
+  // Helper to extract and persist attribution parameters from URL or sessionStorage
+  const getAttribution = () => {
+    const params = new URLSearchParams(location.search);
+    let cached: Record<string, string> = {};
+    try {
+      const raw = sessionStorage.getItem('yp_campaign_attribution');
+      if (raw) cached = JSON.parse(raw);
+    } catch (e) {
+      // ignore
+    }
+
+    const ref = params.get('ref') || cached.ref || '';
+    const programId = params.get('program_id') || params.get('pid') || cached.program_id || '';
+    const campaignId = params.get('campaign_id') || params.get('cid') || cached.campaign_id || '';
+    const campaign = params.get('campaign') || cached.campaign || campaignId || '';
+    const crid = params.get('crid') || cached.crid || '';
+    const sid = params.get('sid') || cached.sid || '';
+    const src = params.get('src') || cached.src || '';
+
+    const attr: Record<string, string> = {};
+    if (ref) attr.ref = ref;
+    if (programId) attr.program_id = programId;
+    if (campaignId) attr.campaign_id = campaignId;
+    if (campaign) attr.campaign = campaign;
+    if (crid) attr.crid = crid;
+    if (sid) attr.sid = sid;
+    if (src) attr.src = src;
+
+    if (Object.keys(attr).length > 0) {
+      try {
+        sessionStorage.setItem('yp_campaign_attribution', JSON.stringify(attr));
+      } catch (e) {
+        // ignore
+      }
+    }
+    return attr;
+  };
 
   // Authoritative Program Dynamic Resolution on Modal Open
   useEffect(() => {
@@ -168,13 +208,26 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose }) 
           customer_phone: trimmedPhone,
           customer_name: trimmedName,
           customer_email: trimmedEmail,
-          notes: {
-            program_code: resolvedProgram.program_code,
-            program_name: resolvedProgram.name,
-            state,
-            district,
-            profession: profession.trim() || 'Member',
-          }
+          notes: (() => {
+            const attr = getAttribution();
+            const n: Record<string, any> = {
+              program_code: resolvedProgram.program_code,
+              program_name: resolvedProgram.name,
+              state,
+              district,
+              profession: profession.trim() || 'Member',
+            };
+            if (attr.ref) {
+              n.ref = attr.ref;
+              n.referral_code = attr.ref;
+            }
+            if (attr.campaign_id) n.campaign_id = attr.campaign_id;
+            if (attr.campaign) n.campaign_code = attr.campaign;
+            if (attr.crid) n.crid = attr.crid;
+            if (attr.sid) n.sid = attr.sid;
+            if (attr.src) n.src = attr.src;
+            return n;
+          })()
         }
       );
 
