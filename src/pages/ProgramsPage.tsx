@@ -294,15 +294,6 @@ export const ProgramsPage: React.FC = () => {
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
                                   Enrolling Now
                                 </span>
-                                {program.duration && (
-                                  <span className="text-xs font-mono font-semibold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
-                                    {program.duration} • {program.learning_mode || 'HYBRID'}
-                                  </span>
-                                )}
-                                <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-                                  <Sparkle className="w-3 h-3 text-emerald-700" />
-                                  Single Source of Truth
-                                </span>
                               </div>
 
                               {/* Title & Icon */}
@@ -333,23 +324,16 @@ export const ProgramsPage: React.FC = () => {
                           </div>
 
                           {/* RIGHT: Price Card with matching height and clean structure (lg:col-span-4) */}
-                          <div className="lg:col-span-4 bg-gradient-to-br from-emerald-50/90 via-emerald-50/50 to-white p-6 sm:p-7 rounded-3xl border border-emerald-200/90 shadow-xs flex flex-col justify-between h-full">
-                            <div className="space-y-1.5">
+                          <div className="lg:col-span-4 bg-gradient-to-br from-emerald-50/90 via-emerald-50/50 to-white p-6 sm:p-8 rounded-3xl border border-emerald-200/90 shadow-xs flex flex-col justify-between items-center text-center h-full space-y-6">
+                            <div className="my-auto flex flex-col items-center justify-center space-y-2">
                               {/* Program Type text before price */}
-                              <span className="text-xs sm:text-sm font-bold font-mono text-emerald-900 uppercase tracking-wider block">
+                              <span className="text-xs sm:text-sm font-extrabold font-mono text-emerald-800 uppercase tracking-widest block">
                                 {programType}
                               </span>
-                              <div className="flex items-baseline gap-3">
-                                <span className="text-3xl sm:text-4xl font-black text-slate-950 font-mono tracking-tight">
-                                  {program.commercials.subscription_price > 0
-                                    ? `₹${program.commercials.subscription_price.toLocaleString('en-IN')}`
-                                    : 'Grant Funded'}
-                                </span>
-                                {program.commercials.market_price > program.commercials.subscription_price && (
-                                  <span className="text-sm text-slate-400 line-through font-mono">
-                                    MRP: ₹{program.commercials.market_price.toLocaleString('en-IN')}
-                                  </span>
-                                )}
+                              <div className="text-4xl sm:text-5xl font-black text-slate-950 font-mono tracking-tight">
+                                {program.commercials.subscription_price > 0
+                                  ? `₹${program.commercials.subscription_price.toLocaleString('en-IN')}`
+                                  : 'Grant Funded'}
                               </div>
                             </div>
 
@@ -384,23 +368,10 @@ export const ProgramsPage: React.FC = () => {
                         {program.components && program.components.length > 0 ? (
                           <div className="pt-8 border-t border-emerald-900/10 space-y-6">
                             {/* Section Header */}
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                              <div className="flex items-center gap-2.5">
-                                <div className="p-2 rounded-xl bg-emerald-100 text-emerald-900">
-                                  <Layers className="w-5 h-5 text-emerald-800" />
-                                </div>
-                                <div>
-                                  <h4 className="font-heading font-black text-base sm:text-lg text-slate-950 tracking-tight flex items-center gap-2">
-                                    Integrated Curriculum Modules & Offerings ({program.components.length})
-                                  </h4>
-                                  <p className="text-xs text-slate-600 mt-0.5">
-                                    Authoritative academic structure, smart wearable tech, wellness programs, and foundation benefits.
-                                  </p>
-                                </div>
-                              </div>
-                              <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200 self-start sm:self-auto flex items-center gap-1">
-                                <Sparkle className="w-3 h-3 text-emerald-700" /> Verified Submodules
-                              </span>
+                            <div>
+                              <h4 className="font-heading font-black text-xl sm:text-2xl text-slate-950 tracking-tight">
+                                Offering
+                              </h4>
                             </div>
 
                             {/* 3 Full-Width Product Image Cards in a row */}
