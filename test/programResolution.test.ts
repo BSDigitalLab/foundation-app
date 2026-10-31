@@ -4,6 +4,7 @@ import {
   resolveProgramByCode,
   clearProgramCache,
   ProgramResolutionError,
+  resolveProgramClassification,
 } from '../src/services/programResolutionService.ts';
 
 describe('Authoritative Dynamic Program Resolution Suite', () => {
@@ -53,6 +54,33 @@ describe('Authoritative Dynamic Program Resolution Suite', () => {
       const program = await resolveProgramByCode('ccpam100');
       assert.ok(program);
       assert.strictEqual(program.id, '09ecaeaa-a525-4262-966c-dd34bc54305f');
+    });
+
+    it('proves Changepreneur Circle is protected from keyword hijacking by generic scholarship words in its description', () => {
+      const classification = resolveProgramClassification({
+        program_code: 'CCPAM100',
+        public_slug: 'changepreneur-circle-premium-annual-membership',
+        name: 'Changepreneur Circle Premium Annual Membership',
+      });
+
+      assert.strictEqual(classification.category, 'community');
+      assert.strictEqual(classification.iconName, 'Sparkles');
+      assert.strictEqual(classification.impactTarget, 'Empower 10 Young Lives per Member');
+      // Invariant: Must NEVER be hijacked into Career Excellence Scholarship
+      assert.notStrictEqual(classification.impactTarget, '100,000 Merit Scholarships by 2035');
+      assert.notStrictEqual(classification.category, 'education');
+    });
+
+    it('proves Career Excellence Scholarship is correctly classified under Education', () => {
+      const classification = resolveProgramClassification({
+        program_code: 'CESP100',
+        public_slug: 'career-excellence-scholarship-program',
+        name: 'Career Excellence Scholarship Program',
+      });
+
+      assert.strictEqual(classification.category, 'education');
+      assert.strictEqual(classification.iconName, 'GraduationCap');
+      assert.strictEqual(classification.impactTarget, '100,000 Merit Scholarships by 2035');
     });
   });
 

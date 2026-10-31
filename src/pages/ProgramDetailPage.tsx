@@ -49,6 +49,7 @@ interface ProgramDetailData {
   };
   components: Array<{
     id: string;
+    component_id?: string;
     name: string;
     offering_type: string;
     delivery_type: string;
@@ -56,6 +57,13 @@ interface ProgramDetailData {
     unit_of_measure: string;
     image_url?: string | null;
     description?: string | null;
+    key_highlights?: string[];
+    submodules?: Array<{
+      name: string;
+      type: string;
+      allocated_units?: number;
+      allocation_policy?: string;
+    }>;
   }>;
 }
 
@@ -444,6 +452,49 @@ export const ProgramDetailPage: React.FC = () => {
                               <p className="text-[11px] text-slate-600 line-clamp-2 mt-1">
                                 {comp.description}
                               </p>
+                            )}
+
+                            {/* Nested Submodules & Benefits */}
+                            {comp.submodules && comp.submodules.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-slate-200/80 space-y-2">
+                                <div className="text-[11px] font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
+                                  <span className="flex items-center gap-1.5 text-emerald-800">
+                                    <Layers className="w-3.5 h-3.5" /> Submodules & Benefits ({comp.submodules.length})
+                                  </span>
+                                </div>
+                                <div className="space-y-1.5 pl-1">
+                                  {comp.submodules.map((sub, sIdx) => (
+                                    <div key={sIdx} className="flex items-start gap-2 text-xs text-slate-700 bg-white p-2 rounded-lg border border-slate-100 shadow-2xs">
+                                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
+                                      <div className="min-w-0 flex-1">
+                                        <span className="font-semibold text-slate-900">{sub.name}</span>
+                                        {sub.allocated_units && sub.allocated_units > 1 && (
+                                          <span className="ml-1.5 text-[10px] font-mono font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                            {sub.allocated_units} sessions
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Key Highlights */}
+                            {comp.key_highlights && comp.key_highlights.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-slate-200/80 space-y-1.5">
+                                <div className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                                  <Sparkles className="w-3.5 h-3.5" /> Key Inclusions:
+                                </div>
+                                <div className="space-y-1 pl-1">
+                                  {comp.key_highlights.map((h, hIdx) => (
+                                    <div key={hIdx} className="flex items-start gap-1.5 text-xs text-slate-700">
+                                      <CheckCircle2 className="w-3 h-3 text-emerald-700 shrink-0 mt-0.5" />
+                                      <span>{h}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
                             )}
                           </div>
                         </div>

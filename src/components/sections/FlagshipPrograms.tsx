@@ -38,18 +38,21 @@ const iconMap: Record<string, React.ReactNode> = {
 };
 
 function getProgramBadgeAndIcon(code: string, name: string): { badge: string; iconKey: string; impact: string } {
-  const text = (code + ' ' + name).toLowerCase();
-  if (text.includes('scholarship') || text.includes('cesp')) {
-    return { badge: 'Education & Talent', iconKey: 'GraduationCap', impact: '100,000 Merit Scholarships by 2035' };
-  }
-  if (text.includes('changepreneur') || text.includes('ccpm')) {
+  const c = (code || '').toUpperCase().trim();
+  const n = (name || '').toLowerCase().trim();
+
+  // Authoritative code and slug precedence
+  if (c.startsWith('CCP') || n.includes('changepreneur')) {
     return { badge: 'Personal Growth & Impact', iconKey: 'Sparkles', impact: 'Empower 10 Young Lives per Member' };
   }
-  if (text.includes('discovery') || text.includes('cd100')) {
-    return { badge: 'Career Evaluation', iconKey: 'BrainCircuit', impact: 'Targeted Student Career Pathways' };
+  if (c.startsWith('CESP') || n.includes('career excellence') || (n.includes('scholarship') && !n.includes('changepreneur'))) {
+    return { badge: 'Education & Talent', iconKey: 'GraduationCap', impact: '100,000 Merit Scholarships by 2035' };
   }
-  if (text.includes('shepreneur') || text.includes('women')) {
+  if (c.startsWith('SHEP') || n.includes('shepreneur')) {
     return { badge: 'Women Empowerment', iconKey: 'Coins', impact: '100,000 Shepreneurs Built' };
+  }
+  if (c.startsWith('CD') || n.includes('discovery')) {
+    return { badge: 'Career Evaluation', iconKey: 'BrainCircuit', impact: 'Targeted Student Career Pathways' };
   }
   return { badge: 'Flagship Initiative', iconKey: 'Sparkles', impact: 'Statewide Transformation Mission' };
 }

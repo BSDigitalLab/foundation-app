@@ -21,8 +21,16 @@ export interface PublicProgramCommercials {
   currency: string;
 }
 
+export interface PublicProgramSubmodule {
+  name: string;
+  type: string;
+  allocated_units?: number;
+  allocation_policy?: string;
+}
+
 export interface PublicProgramComponent {
   id: string;
+  component_id?: string;
   name: string;
   offering_type: string;
   delivery_type?: string;
@@ -30,6 +38,8 @@ export interface PublicProgramComponent {
   unit_of_measure?: string;
   image_url?: string | null;
   description?: string | null;
+  key_highlights?: string[];
+  submodules?: PublicProgramSubmodule[];
 }
 
 export interface PublicProgram {
@@ -113,6 +123,9 @@ export const fetchPublicPrograms = async (forceRefresh = false): Promise<PublicP
     // Hydrate components & offerings for each program from the single source of truth public slug API
     const programs: PublicProgram[] = await Promise.all(
       rawPrograms.map(async (prog) => {
+        if (Array.isArray(prog.components) && prog.components.length > 0) {
+          return prog as PublicProgram;
+        }
         if (!prog.public_slug) return prog as PublicProgram;
         try {
           const detailRes = await fetch(`${apiBase}/api/v1/public/programs/${encodeURIComponent(prog.public_slug)}`, {
@@ -236,3 +249,75 @@ export const resolveProgramByCode = async (
 
   return matched;
 };
+
+export interface ProgramClassification {
+  category: 'education' | 'tech' | 'entrepreneurship' | 'health' | 'community';
+  iconName: string;
+  impactTarget: string;
+}
+
+export function resolveProgramClassification(prog: {
+  program_code?: string;
+  public_slug?: string;
+  name?: string;
+}): ProgramClassification {
+  const code = (prog.program_code || '').toUpperCase().trim();
+  const slug = (prog.public_slug || '').toLowerCase().trim();
+  const name = (prog.name || '').toLowerCase().trim();
+
+  // 1. Authoritative Code / Slug Precedence (Protects against keyword hijacking)
+  if (code.startsWith('CCP') || slug.includes('changepreneur') || name.includes('changepreneur')) {
+    return {
+      category: 'community',
+      iconName: 'Sparkles',
+      impactTarget: 'Empower 10 Young Lives per Member',
+    };
+  }
+
+  if (code.startsWith('CESP') || slug.includes('career-excellence') || name.includes('career excellence scholarship')) {
+    return {
+      category: 'education',
+      iconName: 'GraduationCap',
+      impactTarget: '100,000 Merit Scholarships by 2035',
+    };
+  }
+
+  if (code.startsWith('SHEP') || slug.includes('shepreneur') || name.includes('shepreneur')) {
+    return {
+      category: 'entrepreneurship',
+      iconName: 'Coins',
+      impactTarget: '100,000 Shepreneurs Built',
+    };
+  }
+
+  if (slug.includes('ai-') || name.includes('artificial intelligence') || name.includes('ai & digital')) {
+    return {
+      category: 'tech',
+      iconName: 'BrainCircuit',
+      impactTarget: '1,000,000 Youth AI Enablement',
+    };
+  }
+
+  if (slug.includes('discovery') || name.includes('career discovery')) {
+    return {
+      category: 'education',
+      iconName: 'BrainCircuit',
+      impactTarget: 'Targeted Student Career Pathways',
+    };
+  }
+
+  // 2. Name-only fallback (never searches descriptions)
+  if (name.includes('scholarship') || name.includes('fellowship')) {
+    return {
+      category: 'education',
+      iconName: 'GraduationCap',
+      impactTarget: 'Merit Scholarships & Youth Enablement',
+    };
+  }
+
+  return {
+    category: 'community',
+    iconName: 'Sparkles',
+    impactTarget: 'Statewide Transformation Mission',
+  };
+}

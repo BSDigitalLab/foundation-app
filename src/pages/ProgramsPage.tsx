@@ -6,11 +6,11 @@ import { Link } from 'react-router-dom';
 import {
   Search, GraduationCap, Sparkles, BrainCircuit, Laptop, HeartPulse,
   ShieldCheck, Coins, UsersRound, ArrowRight, Target, CheckCircle2,
-  Sparkle, AlertCircle, RefreshCw
+  Sparkle, AlertCircle, RefreshCw, Layers
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { getPlatformApiBaseUrl } from '../config/apiConfig';
-import { fetchPublicPrograms, PublicProgramComponent } from '../services/programResolutionService';
+import { fetchPublicPrograms, PublicProgramComponent, resolveProgramClassification } from '../services/programResolutionService';
 
 interface PublishedProgramItem {
   id: string;
@@ -49,99 +49,7 @@ const iconMap: Record<string, React.ReactNode> = {
   UsersRound: <UsersRound className="w-7 h-7 text-emerald-800" />,
 };
 
-function inferCategoryAndIcon(name: string, description: string): {
-  category: 'education' | 'tech' | 'entrepreneurship' | 'health' | 'community';
-  iconName: string;
-  impactTarget: string;
-  highlights: string[];
-} {
-  const text = (name + ' ' + (description || '')).toLowerCase();
 
-  if (text.includes('scholarship') || text.includes('career excellence') || text.includes('student') || text.includes('education')) {
-    return {
-      category: 'education',
-      iconName: 'GraduationCap',
-      impactTarget: '100,000 Merit Scholarships by 2035',
-      highlights: [
-        'Comprehensive Aptitude & Personality Assessment Test',
-        'Palana Neurosync Vikas Subscription (180 Days)',
-        'Hands-on AI Basic Workshop & Tool Training',
-        'Communicative English Language Fluency Program',
-        '₹20 Crore Merit Scholarships Initiative',
-        'One-on-One Career Excellence Mentorship',
-      ],
-    };
-  }
-
-  if (text.includes('changepreneur') || text.includes('circle')) {
-    return {
-      category: 'community',
-      iconName: 'Sparkles',
-      impactTarget: 'Empower 10 Young Lives per Member',
-      highlights: [
-        'CAERING Fitness Smart Ring & Health Tracking',
-        'Palana Neurosync Anandha / Zayana (180 Days Subscription)',
-        'Happiness Planner & Changepreneur Community Access',
-        '₹5,000/- HRC Discount Voucher',
-        'Yuvaparipalan Life Membership Access',
-        'Youth Empowerment Scholarship Contribution for 10 Students',
-        'Personal, Professional, Leadership & Entrepreneurship Bootcamps',
-        'Digital Skills & AI Learning, Community Activities & Certificate',
-      ],
-    };
-  }
-
-  if (text.includes('discovery') || text.includes('assessment')) {
-    return {
-      category: 'education',
-      iconName: 'BrainCircuit',
-      impactTarget: 'Targeted Student Career Pathways',
-      highlights: [
-        'Holistic Psychometric & Aptitude Evaluation',
-        'Scientific Stream & Domain Mapping',
-        'Personalized Career Action Blueprint',
-        'Direct Industry Mentor Advisory Access',
-      ],
-    };
-  }
-
-  if (text.includes('ai') || text.includes('tech') || text.includes('digital')) {
-    return {
-      category: 'tech',
-      iconName: 'BrainCircuit',
-      impactTarget: '1,000,000 Youth AI Enablement',
-      highlights: [
-        'Generative AI Foundations & Prompt Engineering',
-        'No-Code Workflow Automation & Tools',
-        'Digital Portfolio & Industry Skill Credentials',
-      ],
-    };
-  }
-
-  if (text.includes('shepreneur') || text.includes('women') || text.includes('entrepreneur')) {
-    return {
-      category: 'entrepreneurship',
-      iconName: 'Coins',
-      impactTarget: '100,000 Shepreneurs Built',
-      highlights: [
-        'Micro-Enterprise Incubation & Toolkits',
-        'Financial Literacy & Digital Trade Access',
-        'National Market Linkages & Mentorship',
-      ],
-    };
-  }
-
-  return {
-    category: 'community',
-    iconName: 'Sparkles',
-    impactTarget: 'Statewide Transformation Mission',
-    highlights: [
-      'Structured Empowerment Framework',
-      'Community Action Network Access',
-      'Certified Foundation Recognition',
-    ],
-  };
-}
 
 export const ProgramsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -158,12 +66,16 @@ export const ProgramsPage: React.FC = () => {
       const programs = await fetchPublicPrograms(true);
       if (Array.isArray(programs) && programs.length > 0) {
         const mapped: PublishedProgramItem[] = programs.map((item) => {
-          const inferred = inferCategoryAndIcon(item.name || '', item.description || '');
+          const inferred = resolveProgramClassification({
+            program_code: item.program_code,
+            public_slug: item.public_slug,
+            name: item.name,
+          });
           
-          // Authoritative highlights: derive from genuine submodules/components if present in SOT
+          // Authoritative highlights: derive strictly from genuine components in SOT
           const authoritativeHighlights = (item.components && item.components.length > 0)
             ? item.components.map(c => c.name)
-            : inferred.highlights;
+            : [];
 
           return {
             id: item.id,
@@ -406,15 +318,72 @@ export const ProgramsPage: React.FC = () => {
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-slate-700 font-medium">
                                 {program.components.map((comp) => (
-                                  <div key={comp.id} className="flex flex-col bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-200 hover:bg-emerald-50 transition-colors">
+                                  <div key={comp.id} className="flex flex-col bg-emerald-50/60 p-3 rounded-xl border border-emerald-200 hover:bg-emerald-50 transition-colors">
                                     <div className="flex items-start gap-2">
                                       <CheckCircle2 className="w-4 h-4 text-emerald-800 shrink-0 mt-0.5" />
-                                      <span className="font-bold text-slate-900 leading-tight">{comp.name}</span>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="font-bold text-slate-900 leading-tight">{comp.name}</span>
+                                          {comp.offering_type && (
+                                            <span className="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded bg-white text-emerald-800 border border-emerald-200">
+                                              {comp.offering_type}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
                                     </div>
                                     {comp.description && (
                                       <p className="text-[11px] text-slate-600 font-normal mt-1 pl-6 leading-relaxed line-clamp-2">
                                         {comp.description}
                                       </p>
+                                    )}
+
+                                    {/* Nested Curriculum Modules / Submodules */}
+                                    {comp.submodules && comp.submodules.length > 0 && (
+                                      <div className="mt-2.5 pl-6 pt-2 border-t border-emerald-900/10 space-y-1.5">
+                                        <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-950 flex items-center justify-between">
+                                          <span className="flex items-center gap-1">
+                                            <Layers className="w-3 h-3 text-emerald-700" /> Curriculum & Benefits ({comp.submodules.length}):
+                                          </span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {comp.submodules.map((sm, sIdx) => (
+                                            <span
+                                              key={sIdx}
+                                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-white text-slate-800 border border-emerald-200/90 shadow-2xs"
+                                              title={`${sm.name} (${sm.type})`}
+                                            >
+                                              <Sparkle className="w-2 h-2 text-emerald-600 shrink-0" />
+                                              <span className="truncate max-w-[130px]">{sm.name}</span>
+                                              {sm.allocated_units && sm.allocated_units > 1 && (
+                                                <span className="text-[9px] font-mono font-bold text-emerald-800 bg-emerald-50 px-1 rounded">
+                                                  {sm.allocated_units}x
+                                                </span>
+                                              )}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Highlights */}
+                                    {comp.key_highlights && comp.key_highlights.length > 0 && (
+                                      <div className="mt-2 pl-6 pt-1.5 border-t border-emerald-900/10 space-y-1">
+                                        <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-950 flex items-center gap-1">
+                                          <Sparkle className="w-2.5 h-2.5 text-emerald-700" /> Key Highlights ({comp.key_highlights.length}):
+                                        </div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {comp.key_highlights.map((kh, khIdx) => (
+                                            <span
+                                              key={khIdx}
+                                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-white text-slate-800 border border-emerald-200/90 shadow-2xs"
+                                            >
+                                              <CheckCircle2 className="w-2 h-2 text-emerald-600 shrink-0" />
+                                              <span className="truncate max-w-[130px]">{kh}</span>
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
                                 ))}
