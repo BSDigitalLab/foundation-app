@@ -141,7 +141,7 @@ export const ProgramsPage: React.FC = () => {
       />
 
       <div className="pt-32 pb-24 bg-[#fafaf7]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <FadeIn direction="up">
             <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
@@ -215,7 +215,7 @@ export const ProgramsPage: React.FC = () => {
             </div>
           )}
 
-          {/* PUBLISHED PROGRAMS GRID */}
+          {/* PUBLISHED PROGRAMS FULL-WIDTH SHOWCASE */}
           <div className="mb-20">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 pb-4 border-b border-emerald-900/10">
               <div className="flex items-center gap-3">
@@ -239,30 +239,27 @@ export const ProgramsPage: React.FC = () => {
 
             {loading ? (
               /* Loading Skeletons */
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {[1, 2].map((n) => (
-                  <div key={n} className="p-8 rounded-3xl bg-white border border-slate-200 shadow-sm animate-pulse space-y-6">
+              <div className="w-full space-y-8">
+                {[1].map((n) => (
+                  <div key={n} className="p-8 sm:p-10 rounded-3xl bg-white border border-slate-200 shadow-sm animate-pulse space-y-6">
                     <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-2xl bg-slate-200" />
+                      <div className="w-16 h-16 rounded-2xl bg-slate-200" />
                       <div className="space-y-2 flex-1">
-                        <div className="w-24 h-4 bg-slate-200 rounded" />
-                        <div className="w-3/4 h-6 bg-slate-200 rounded" />
+                        <div className="w-28 h-5 bg-slate-200 rounded" />
+                        <div className="w-1/2 h-7 bg-slate-200 rounded" />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <div className="w-full h-4 bg-slate-100 rounded" />
                       <div className="w-5/6 h-4 bg-slate-100 rounded" />
                     </div>
-                    <div className="h-20 bg-emerald-50/50 rounded-2xl" />
-                    <div className="flex justify-between items-center pt-4 border-t border-slate-100">
-                      <div className="w-32 h-4 bg-slate-100 rounded" />
-                      <div className="w-28 h-9 bg-slate-200 rounded-xl" />
-                    </div>
+                    <div className="h-32 bg-emerald-50/50 rounded-2xl" />
                   </div>
                 ))}
               </div>
             ) : filteredPublished.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              /* FULL-WIDTH PROGRAM CARDS */
+              <div className="w-full space-y-10">
                 {filteredPublished.map((program, idx) => {
                   const isChangepreneur =
                     program.program_code === 'CCPAM100' ||
@@ -272,111 +269,236 @@ export const ProgramsPage: React.FC = () => {
                     program.program_code === 'CESP100' ||
                     program.public_slug.includes('career-excellence');
 
+                  const subsidyPercentage =
+                    program.commercials.market_price > program.commercials.subscription_price &&
+                    program.commercials.market_price > 0
+                      ? Math.round(
+                          ((program.commercials.market_price - program.commercials.subscription_price) /
+                            program.commercials.market_price) *
+                            100
+                        )
+                      : 0;
+
                   return (
-                    <FadeIn key={program.id || program.program_code} direction="up" delay={idx * 0.05} className="h-full">
+                    <FadeIn key={program.id || program.program_code} direction="up" delay={idx * 0.05} className="w-full">
                       <div
                         id={program.public_slug}
-                        className="p-8 rounded-3xl bg-white border border-emerald-900/15 hover:border-emerald-700/40 transition-all duration-300 shadow-sm hover:shadow-xl relative overflow-hidden flex flex-col justify-between h-full"
+                        className="w-full rounded-3xl bg-white border border-emerald-900/15 hover:border-emerald-700/40 transition-all duration-300 shadow-sm hover:shadow-xl relative overflow-hidden p-6 sm:p-8 lg:p-10 space-y-8"
                       >
-                        <div className="space-y-6 flex-1 flex flex-col">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex items-center gap-4">
-                              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
-                                {iconMap[program.iconName] || <GraduationCap className="w-7 h-7 text-emerald-800" />}
+                        {/* TOP SECTION: 2-COLUMN FULL-WIDTH HERO */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                          {/* LEFT: Identity, Badges & Narrative (lg:col-span-8) */}
+                          <div className="lg:col-span-8 space-y-4">
+                            {/* Badges Bar */}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge variant="emerald" className="font-mono text-xs px-2.5 py-1">
+                                {program.program_code}
+                              </Badge>
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-mono uppercase bg-emerald-100 text-emerald-900 border border-emerald-300">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                                Enrolling Now
+                              </span>
+                              {program.duration && (
+                                <span className="text-xs font-mono font-semibold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                                  {program.duration} • {program.learning_mode || 'HYBRID'}
+                                </span>
+                              )}
+                              <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+                                <Sparkle className="w-3 h-3 text-emerald-700" />
+                                Single Source of Truth
+                              </span>
+                            </div>
+
+                            {/* Title & Icon */}
+                            <div className="flex items-start gap-4 pt-1">
+                              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 shrink-0 mt-1">
+                                {iconMap[program.iconName] || <Sparkles className="w-8 h-8 text-emerald-800" />}
                               </div>
                               <div>
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="emerald">{program.program_code}</Badge>
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold font-mono uppercase bg-emerald-100 text-emerald-800">
-                                    Enrolling
-                                  </span>
-                                </div>
-                                <h3 className="font-heading font-extrabold text-2xl text-slate-900 mt-1">
+                                <h3 className="font-heading font-black text-2xl sm:text-3xl lg:text-4xl text-slate-950 tracking-tight leading-tight">
                                   {program.name}
                                 </h3>
+                                {program.impactTarget && (
+                                  <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-800 mt-1.5">
+                                    <Target className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                                    <span>Target Impact: {program.impactTarget}</span>
+                                  </div>
+                                )}
                               </div>
+                            </div>
+
+                            {/* Authoritative Program Summary / Description */}
+                            <div className="pt-2">
+                              <p className="text-sm sm:text-base text-slate-700 leading-relaxed font-normal">
+                                {program.description}
+                              </p>
                             </div>
                           </div>
 
-                          {/* Authoritative Program Summary / Short Description */}
-                          <div className="space-y-2">
-                            <p className="text-sm text-slate-700 leading-relaxed font-medium">
-                              {program.description}
-                            </p>
-                          </div>
-
-                          {/* Curated Submodules & Key Inclusions from SOT */}
-                          {program.components && program.components.length > 0 ? (
-                            <div className="space-y-3 flex-1 flex flex-col pt-1">
-                              <div className="flex items-center justify-between border-b border-emerald-900/10 pb-1.5">
-                                <h4 className="font-heading font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                                  <Sparkle className="w-3.5 h-3.5 text-emerald-700" /> Submodules & Member Inclusions ({program.components.length})
-                                </h4>
-                                <span className="text-[10px] font-mono text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                                  Single Source of Truth
+                          {/* RIGHT: Commercials & Enrollment Action Card (lg:col-span-4) */}
+                          <div className="lg:col-span-4 bg-gradient-to-br from-emerald-50/90 via-emerald-50/50 to-white p-6 sm:p-7 rounded-3xl border border-emerald-200/90 shadow-xs flex flex-col justify-between space-y-5">
+                            <div>
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-emerald-900 block">
+                                  Candidate Subscription Rate
                                 </span>
+                                {subsidyPercentage > 0 && (
+                                  <span className="text-[10px] font-mono font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
+                                    {subsidyPercentage}% SCHOLARSHIP SUBSIDY
+                                  </span>
+                                )}
                               </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-slate-700 font-medium">
-                                {program.components.map((comp) => (
-                                  <div key={comp.id} className="flex flex-col bg-emerald-50/60 p-3 rounded-xl border border-emerald-200 hover:bg-emerald-50 transition-colors">
-                                    <div className="flex items-start gap-2">
-                                      <CheckCircle2 className="w-4 h-4 text-emerald-800 shrink-0 mt-0.5" />
+                              <div className="flex items-baseline gap-3 mt-1.5">
+                                <span className="text-3xl sm:text-4xl font-black text-slate-950 font-mono tracking-tight">
+                                  {program.commercials.subscription_price > 0
+                                    ? `₹${program.commercials.subscription_price.toLocaleString('en-IN')}`
+                                    : 'Grant Funded'}
+                                </span>
+                                {program.commercials.market_price > program.commercials.subscription_price && (
+                                  <span className="text-sm text-slate-400 line-through font-mono">
+                                    MRP: ₹{program.commercials.market_price.toLocaleString('en-IN')}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-600 font-medium mt-2 leading-snug">
+                                Transparent pricing approved under Foundation Educational Subsidy framework.
+                              </p>
+                            </div>
+
+                            <div className="space-y-3 pt-2">
+                              {isChangepreneur ? (
+                                <Link to="/programs/changepreneur-circle" className="w-full block">
+                                  <button className="w-full bg-[#15803d] hover:bg-[#166534] text-white font-black text-sm px-6 py-3.5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02] flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-emerald-700">
+                                    <span>Explore & Join Circle</span>
+                                    <ArrowRight className="w-4 h-4 text-emerald-100" />
+                                  </button>
+                                </Link>
+                              ) : isCESP ? (
+                                <Link to="/programs/career-excellence-scholarship-program" className="w-full block">
+                                  <button className="w-full bg-[#15803d] hover:bg-[#166534] text-white font-black text-sm px-6 py-3.5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02] flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-emerald-700">
+                                    <span>Explore & Enroll</span>
+                                    <ArrowRight className="w-4 h-4 text-emerald-100" />
+                                  </button>
+                                </Link>
+                              ) : (
+                                <Link to={`/programs/${program.public_slug}`} className="w-full block">
+                                  <button className="w-full bg-[#15803d] hover:bg-[#166534] text-white font-black text-sm px-6 py-3.5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02] flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-emerald-700">
+                                    <span>Explore & Enroll</span>
+                                    <ArrowRight className="w-4 h-4 text-emerald-100" />
+                                  </button>
+                                </Link>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* BOTTOM SECTION: SUBMODULES & PRODUCT OFFERINGS STRUCTURED GRID */}
+                        {program.components && program.components.length > 0 ? (
+                          <div className="pt-8 border-t border-emerald-900/10 space-y-4">
+                            {/* Section Header */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <div className="flex items-center gap-2.5">
+                                <div className="p-2 rounded-xl bg-emerald-100 text-emerald-900">
+                                  <Layers className="w-5 h-5 text-emerald-800" />
+                                </div>
+                                <div>
+                                  <h4 className="font-heading font-black text-base sm:text-lg text-slate-950 tracking-tight flex items-center gap-2">
+                                    Integrated Curriculum Modules & Offerings ({program.components.length})
+                                  </h4>
+                                  <p className="text-xs text-slate-600 mt-0.5">
+                                    Authoritative academic structure, smart wearable tech, wellness programs, and foundation benefits.
+                                  </p>
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200 self-start sm:self-auto flex items-center gap-1">
+                                <Sparkle className="w-3 h-3 text-emerald-700" /> Verified Submodules
+                              </span>
+                            </div>
+
+                            {/* Structured Submodule Cards Grid using full width */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 pt-2">
+                              {program.components.map((comp, compIdx) => (
+                                <div
+                                  key={comp.id || compIdx}
+                                  className="bg-slate-50/70 hover:bg-emerald-50/40 rounded-2xl border border-slate-200 hover:border-emerald-300 p-4 transition-all duration-200 flex flex-col justify-between group/card shadow-2xs hover:shadow-sm"
+                                >
+                                  <div className="space-y-3">
+                                    {/* Top row with Submodule Product Image + Head and Badges */}
+                                    <div className="flex items-start gap-3">
+                                      {comp.image_url ? (
+                                        <img
+                                          src={comp.image_url}
+                                          alt={comp.name}
+                                          className="w-14 h-14 rounded-xl object-contain bg-white p-1.5 border border-slate-200/90 shadow-2xs shrink-0 group-hover/card:scale-105 transition-transform"
+                                          loading="lazy"
+                                          onError={(e) => {
+                                            (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                          }}
+                                        />
+                                      ) : (
+                                        <div className="w-14 h-14 rounded-xl bg-emerald-100/80 border border-emerald-200 flex items-center justify-center shrink-0 text-emerald-800">
+                                          <Layers className="w-6 h-6" />
+                                        </div>
+                                      )}
+
                                       <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-1.5 flex-wrap">
-                                          <span className="font-bold text-slate-900 leading-tight">{comp.name}</span>
                                           {comp.offering_type && (
-                                            <span className="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded bg-white text-emerald-800 border border-emerald-200">
-                                              {comp.offering_type}
+                                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-900 border border-emerald-300 uppercase">
+                                              {comp.offering_type.replace('_', ' ')}
+                                            </span>
+                                          )}
+                                          {comp.delivery_type && (
+                                            <span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-white text-slate-600 border border-slate-200 uppercase">
+                                              {comp.delivery_type.replace('_', ' ')}
                                             </span>
                                           )}
                                         </div>
+                                        <h5 className="font-heading font-extrabold text-xs sm:text-sm text-slate-950 mt-1 leading-snug line-clamp-2">
+                                          {comp.name}
+                                        </h5>
                                       </div>
                                     </div>
+
+                                    {/* Submodule Short Description */}
                                     {comp.description && (
-                                      <p className="text-[11px] text-slate-600 font-normal mt-1 pl-6 leading-relaxed line-clamp-2">
+                                      <p
+                                        className="text-[11px] sm:text-xs text-slate-600 font-normal leading-relaxed line-clamp-3"
+                                        title={comp.description}
+                                      >
                                         {comp.description}
                                       </p>
                                     )}
 
-                                    {/* Nested Curriculum Modules / Submodules */}
+                                    {/* Nested Submodules / Curriculum Modules (e.g. 7 Changepreneur Masterclasses) */}
                                     {comp.submodules && comp.submodules.length > 0 && (
-                                      <div className="mt-2.5 pl-6 pt-2 border-t border-emerald-900/10 space-y-1.5">
-                                        <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-950 flex items-center justify-between">
-                                          <span className="flex items-center gap-1">
-                                            <Layers className="w-3 h-3 text-emerald-700" /> Curriculum & Benefits ({comp.submodules.length}):
-                                          </span>
+                                      <div className="pt-2.5 border-t border-emerald-900/10 space-y-1.5">
+                                        <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-950 flex items-center gap-1">
+                                          <Sparkle className="w-2.5 h-2.5 text-emerald-700" /> Integrated Modules ({comp.submodules.length}):
                                         </div>
-                                        <div className="flex flex-wrap gap-1">
+                                        <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
                                           {comp.submodules.map((sm, sIdx) => (
                                             <span
                                               key={sIdx}
-                                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-white text-slate-800 border border-emerald-200/90 shadow-2xs"
+                                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-white text-slate-800 border border-emerald-200 shadow-2xs"
                                               title={`${sm.name} (${sm.type})`}
                                             >
-                                              <Sparkle className="w-2 h-2 text-emerald-600 shrink-0" />
+                                              <CheckCircle2 className="w-2 h-2 text-emerald-600 shrink-0" />
                                               <span className="truncate max-w-[130px]">{sm.name}</span>
-                                              {sm.allocated_units && sm.allocated_units > 1 && (
-                                                <span className="text-[9px] font-mono font-bold text-emerald-800 bg-emerald-50 px-1 rounded">
-                                                  {sm.allocated_units}x
-                                                </span>
-                                              )}
                                             </span>
                                           ))}
                                         </div>
                                       </div>
                                     )}
 
-                                    {/* Highlights */}
+                                    {/* Key Highlights */}
                                     {comp.key_highlights && comp.key_highlights.length > 0 && (
-                                      <div className="mt-2 pl-6 pt-1.5 border-t border-emerald-900/10 space-y-1">
-                                        <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-950 flex items-center gap-1">
-                                          <Sparkle className="w-2.5 h-2.5 text-emerald-700" /> Key Highlights ({comp.key_highlights.length}):
-                                        </div>
+                                      <div className="pt-2 border-t border-emerald-900/10 space-y-1">
                                         <div className="flex flex-wrap gap-1">
                                           {comp.key_highlights.map((kh, khIdx) => (
                                             <span
                                               key={khIdx}
-                                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-white text-slate-800 border border-emerald-200/90 shadow-2xs"
+                                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-white text-slate-700 border border-emerald-200/80"
                                             >
                                               <CheckCircle2 className="w-2 h-2 text-emerald-600 shrink-0" />
                                               <span className="truncate max-w-[130px]">{kh}</span>
@@ -386,90 +508,25 @@ export const ProgramsPage: React.FC = () => {
                                       </div>
                                     )}
                                   </div>
-                                ))}
-                              </div>
+                                </div>
+                              ))}
                             </div>
-                          ) : program.highlights && program.highlights.length > 0 ? (
-                            <div className="space-y-2 flex-1 flex flex-col">
-                              <h4 className="font-heading font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                                <Sparkle className="w-3.5 h-3.5 text-emerald-700" /> Key Inclusions & Benefits:
-                              </h4>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700 font-medium">
-                                {program.highlights.map((h, i) => (
-                                  <div key={i} className="flex items-start gap-2 bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-200">
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-800 shrink-0 mt-0.5" />
-                                    <span>{h}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ) : null}
-
-                          {/* Pricing & Commercials */}
-                          <div className="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-200 flex items-center justify-between">
-                            <div>
-                              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-900 block">
-                                {program.commercials.subscription_price > 0 ? 'Scholarship Subsidized Fee' : 'Program Pricing'}
-                              </span>
-                              <div className="flex items-baseline gap-2 mt-0.5">
-                                <span className="text-2xl font-black text-slate-950 font-mono">
-                                  {program.commercials.subscription_price > 0
-                                    ? `₹${program.commercials.subscription_price.toLocaleString('en-IN')}`
-                                    : 'Scholarship Grant'}
-                                </span>
-                                {program.commercials.market_price > program.commercials.subscription_price && (
-                                  <span className="text-xs text-slate-400 line-through font-mono">
-                                    ₹{program.commercials.market_price.toLocaleString('en-IN')}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            {program.duration && (
-                              <span className="text-xs font-mono font-semibold text-emerald-900 bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-300">
-                                {program.duration}
-                              </span>
-                            )}
                           </div>
-                        </div>
-
-                        {/* Footer Actions */}
-                        <div className="pt-4 mt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-                          <div className="text-xs font-mono font-bold text-emerald-900 flex items-center gap-1.5">
-                            <Target className="w-4 h-4 text-emerald-800 shrink-0" />
-                            <span className="truncate">{program.impactTarget}</span>
+                        ) : program.highlights && program.highlights.length > 0 ? (
+                          <div className="pt-6 border-t border-emerald-900/10 space-y-3">
+                            <h4 className="font-heading font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                              <Sparkle className="w-3.5 h-3.5 text-emerald-700" /> Key Inclusions & Benefits:
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 text-xs text-slate-700 font-medium">
+                              {program.highlights.map((h, i) => (
+                                <div key={i} className="flex items-start gap-2 bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-200">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-800 shrink-0 mt-0.5" />
+                                  <span>{h}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          {isChangepreneur ? (
-                            <Link
-                              to="/programs/changepreneur-circle"
-                              className="w-full sm:w-auto"
-                            >
-                              <button className="bg-[#15803d] hover:bg-[#166534] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.03] flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-700 w-full sm:w-auto">
-                                <span>Explore & Join Circle</span>
-                                <ArrowRight className="w-3.5 h-3.5 text-emerald-100" />
-                              </button>
-                            </Link>
-                          ) : isCESP ? (
-                            <Link
-                              to="/programs/career-excellence-scholarship-program"
-                              className="w-full sm:w-auto"
-                            >
-                              <button className="bg-[#15803d] hover:bg-[#166534] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.03] flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-700 w-full sm:w-auto">
-                                <span>Explore & Enroll</span>
-                                <ArrowRight className="w-3.5 h-3.5 text-emerald-100" />
-                              </button>
-                            </Link>
-                          ) : (
-                            <Link
-                              to={`/programs/${program.public_slug}`}
-                              className="w-full sm:w-auto"
-                            >
-                              <button className="bg-[#15803d] hover:bg-[#166534] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.03] flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-700 w-full sm:w-auto">
-                                <span>Explore & Enroll</span>
-                                <ArrowRight className="w-3.5 h-3.5 text-emerald-100" />
-                              </button>
-                            </Link>
-                          )}
-                        </div>
+                        ) : null}
                       </div>
                     </FadeIn>
                   );

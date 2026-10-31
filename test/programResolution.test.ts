@@ -40,6 +40,56 @@ describe('Authoritative Dynamic Program Resolution Suite', () => {
       assert.ok(program.components.some(c => c.name.includes('Youth Empowerment Scholarship Contribution')));
     });
 
+    it('verifies program components contain authoritative media images, short descriptions, and zero mock data', async () => {
+      const program = await resolveProgramByCode('CCPAM100', {
+        fallbackSlugs: ['changepreneur-circle-premium-annual-membership'],
+        forceRefresh: true
+      });
+
+      assert.ok(program);
+      assert.ok(Array.isArray(program.components));
+      assert.strictEqual(program.components.length, 7);
+
+      for (const comp of program.components) {
+        // 1. Authoritative product image URL starting with https://
+        assert.ok(comp.image_url, `Component ${comp.name} must have a valid product image URL`);
+        assert.ok(comp.image_url.startsWith('https://'), `Component ${comp.name} image URL must be HTTPS`);
+        assert.ok(!comp.image_url.includes('placeholder'), `Component ${comp.name} image URL must not be a placeholder`);
+
+        // 2. Authoritative head and short description
+        assert.ok(comp.name && comp.name.trim().length > 3, 'Component must have a valid title/name');
+        assert.ok(comp.description && comp.description.trim().length > 10, `Component ${comp.name} must have a non-empty description`);
+        assert.ok(!comp.description.toLowerCase().includes('lorem ipsum'), `Component ${comp.name} description must not contain mock text`);
+
+        // 3. Offering type
+        assert.ok(comp.offering_type, `Component ${comp.name} must have an offering_type`);
+        assert.ok(['MEMBERSHIP', 'PRODUCT', 'DISCOUNT_VOUCHER', 'COURSE'].includes(comp.offering_type));
+      }
+
+      // 4. Verify nested submodules under component 1 (Changepreneur Circle Annual Premium Membership)
+      const primaryComp = program.components[0];
+      assert.strictEqual(primaryComp.name, 'Changepreneur Circle Annual Premium Membership');
+      assert.ok(Array.isArray(primaryComp.submodules));
+      assert.strictEqual(primaryComp.submodules.length, 7, 'Component 1 must contain 7 nested masterclasses/benefits');
+
+      const expectedSubmoduleNames = [
+        'Changepreneur Elevate',
+        'Changepreneur LeadX',
+        'Changepreneur Prosper',
+        'Changepreneur FutureReady AI',
+        'Changepreneur Inner Compass',
+        'Morning Circle Meetups',
+        'Changepreneur Growth Certificate'
+      ];
+
+      for (const expected of expectedSubmoduleNames) {
+        assert.ok(
+          primaryComp.submodules.some(sm => sm.name.includes(expected)),
+          `Missing expected nested submodule matching "${expected}"`
+        );
+      }
+    });
+
     it('reconciles legacy alias CCPM100 to canonical published CCPAM100 dynamically', async () => {
       const program = await resolveProgramByCode('CCPM100', {
         fallbackSlugs: ['changepreneur-circle-premium-annual-membership']
