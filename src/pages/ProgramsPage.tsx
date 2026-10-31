@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import {
   Search, GraduationCap, Sparkles, BrainCircuit, Laptop, HeartPulse,
   ShieldCheck, Coins, UsersRound, ArrowRight, Target, CheckCircle2,
-  Sparkle, AlertCircle, RefreshCw, Layers
+  Sparkle, AlertCircle, RefreshCw, Layers, X, Info
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { getPlatformApiBaseUrl } from '../config/apiConfig';
@@ -57,6 +57,17 @@ export const ProgramsPage: React.FC = () => {
   const [publishedPrograms, setPublishedPrograms] = useState<PublishedProgramItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedSubmodule, setSelectedSubmodule] = useState<PublicProgramComponent | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedSubmodule(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const fetchPrograms = useCallback(async () => {
     setLoading(true);
@@ -374,12 +385,22 @@ export const ProgramsPage: React.FC = () => {
                               </h4>
                             </div>
 
-                            {/* 3 Full-Width Product Image Cards in a row */}
+                            {/* 3 Full-Width Product Image Cards in a row with Interactive Modal Trigger */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 pt-2">
                               {program.components.map((comp, compIdx) => (
                                 <div
                                   key={comp.id || compIdx}
-                                  className="rounded-2xl overflow-hidden bg-white border border-slate-200/80 hover:border-emerald-500/40 shadow-xs hover:shadow-xl transition-all duration-300 group flex items-center justify-center p-3 sm:p-4"
+                                  onClick={() => setSelectedSubmodule(comp)}
+                                  role="button"
+                                  tabIndex={0}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      setSelectedSubmodule(comp);
+                                    }
+                                  }}
+                                  aria-label={`View details for ${comp.name}`}
+                                  className="cursor-pointer rounded-2xl overflow-hidden bg-white border border-slate-200/80 hover:border-emerald-500/50 shadow-xs hover:shadow-xl transition-all duration-300 group flex items-center justify-center p-3 sm:p-4 relative"
                                 >
                                   {comp.image_url ? (
                                     <img
@@ -397,6 +418,9 @@ export const ProgramsPage: React.FC = () => {
                                       <span className="font-heading font-bold text-sm text-slate-800">{comp.name}</span>
                                     </div>
                                   )}
+                                  <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/80 text-white text-[10px] font-mono px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs pointer-events-none">
+                                    <Info className="w-2.5 h-2.5" /> Details
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -438,6 +462,119 @@ export const ProgramsPage: React.FC = () => {
           </div>
         </div>
       </div>
+      {/* Submodule Informative Popup Modal */}
+      {selectedSubmodule && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setSelectedSubmodule(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase bg-emerald-100 text-emerald-900 border border-emerald-300">
+                  {selectedSubmodule.offering_type ? selectedSubmodule.offering_type.replace('_', ' ') : 'OFFERING'}
+                </span>
+                {selectedSubmodule.delivery_type && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold uppercase bg-slate-100 text-slate-600 border border-slate-200">
+                    {selectedSubmodule.delivery_type.replace('_', ' ')}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => setSelectedSubmodule(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none"
+                aria-label="Close dialog"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-4">
+              {/* Product Media Display */}
+              {selectedSubmodule.image_url && (
+                <div className="w-full flex items-center justify-center bg-slate-50/70 p-3 rounded-2xl border border-slate-200/80">
+                  <img
+                    src={selectedSubmodule.image_url}
+                    alt={selectedSubmodule.name}
+                    className="max-h-56 w-auto object-contain rounded-xl"
+                  />
+                </div>
+              )}
+
+              {/* Title */}
+              <h3 className="font-heading font-black text-xl text-slate-950 leading-snug">
+                {selectedSubmodule.name}
+              </h3>
+
+              {/* Program Description */}
+              {selectedSubmodule.description && (
+                <div className="bg-emerald-50/40 p-4 rounded-2xl border border-emerald-200/80">
+                  <p className="text-sm text-slate-700 leading-relaxed font-normal">
+                    {selectedSubmodule.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Nested Curriculum Modules (if any) */}
+              {selectedSubmodule.submodules && selectedSubmodule.submodules.length > 0 && (
+                <div className="space-y-2 pt-1">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-900 block font-heading">
+                    Included Curriculum Modules ({selectedSubmodule.submodules.length})
+                  </span>
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                    {selectedSubmodule.submodules.map((sm, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-800"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span className="font-medium">{sm.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Key Highlights (if any) */}
+              {selectedSubmodule.key_highlights && selectedSubmodule.key_highlights.length > 0 && (
+                <div className="space-y-2 pt-1">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-900 block font-heading">
+                    Key Inclusions ({selectedSubmodule.key_highlights.length})
+                  </span>
+                  <div className="space-y-1.5">
+                    {selectedSubmodule.key_highlights.map((kh, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-800"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span className="font-medium">{kh}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end">
+              <button
+                onClick={() => setSelectedSubmodule(null)}
+                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-colors shadow-sm focus:outline-none"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
