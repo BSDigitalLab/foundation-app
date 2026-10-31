@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FadeIn } from '../motion/FadeIn';
 import {
-  GraduationCap, Sparkles, BrainCircuit, Laptop, HeartPulse, ShieldCheck,
+  GraduationCap, Sparkles, Sparkle, Layers, BrainCircuit, Laptop, HeartPulse, ShieldCheck,
   Coins, UsersRound, ArrowRight, CheckCircle2, Target
 } from 'lucide-react';
 import { getPlatformApiBaseUrl } from '../../config/apiConfig';
+import { fetchPublicPrograms, PublicProgram } from '../../services/programResolutionService';
 
 interface PublicCatalogProgram {
   id: string;
@@ -54,26 +55,22 @@ function getProgramBadgeAndIcon(code: string, name: string): { badge: string; ic
 }
 
 export const FlagshipPrograms: React.FC = () => {
-  const [programs, setPrograms] = useState<PublicCatalogProgram[]>([]);
+  const [programs, setPrograms] = useState<PublicProgram[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     let isMounted = true;
-    const apiBase = getPlatformApiBaseUrl();
 
-    fetch(`${apiBase}/api/v1/public/programs`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
+    // Authoritative Single Source of Truth resolution via programResolutionService
+    fetchPublicPrograms(true)
       .then((data) => {
-        if (isMounted && data && data.status === 'SUCCESS' && Array.isArray(data.data)) {
-          setPrograms(data.data);
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setPrograms(data);
         }
       })
       .catch((err) => {
-        console.warn('[FlagshipPrograms] API fetch note:', err);
+        console.warn('[FlagshipPrograms] SOT fetch note:', err);
       })
       .finally(() => {
         if (isMounted) setLoading(false);
@@ -163,9 +160,41 @@ export const FlagshipPrograms: React.FC = () => {
                         </div>
                       </div>
 
+                      {/* Authoritative Program Description */}
                       <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
                         {program.description || 'Comprehensive developmental program designed for career, skill, and personal growth.'}
                       </p>
+
+                      {/* Curated Submodules & Key Benefits from SOT */}
+                      {program.components && program.components.length > 0 && (
+                        <div className="pt-2 border-t border-emerald-900/10 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1">
+                              <Sparkle className="w-3 h-3 text-emerald-700" /> Key Inclusions ({program.components.length})
+                            </span>
+                            <span className="text-[9px] font-mono text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                              SOT
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {program.components.slice(0, 4).map((comp) => (
+                              <span
+                                key={comp.id}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-emerald-50/80 text-slate-800 border border-emerald-200/80"
+                                title={comp.description || comp.name}
+                              >
+                                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-700 shrink-0" />
+                                <span className="truncate max-w-[130px]">{comp.name}</span>
+                              </span>
+                            ))}
+                            {program.components.length > 4 && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                +{program.components.length - 4} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Card Footer: Target Metric + Right-Aligned CTA Button */}

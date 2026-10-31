@@ -27,6 +27,16 @@ describe('Authoritative Dynamic Program Resolution Suite', () => {
       assert.strictEqual(program.public_slug, 'changepreneur-circle-premium-annual-membership');
       assert.strictEqual(program.commercials.subscription_price, 30000.0);
       assert.strictEqual(program.commercials.currency, 'INR');
+      // Assert authoritative components & submodules are hydrated from single source of truth
+      assert.ok(Array.isArray(program.components), 'components should be an array');
+      assert.strictEqual(program.components.length, 7, 'CCPAM100 must have 7 authoritative components/submodules');
+      assert.strictEqual(program.components[0].name, 'Changepreneur Circle Annual Premium Membership');
+      assert.ok(program.components.some(c => c.name.includes('Caering Fitness Ring')));
+      assert.ok(program.components.some(c => c.name.includes('Palana Neurosync Anandha / Zayana')));
+      assert.ok(program.components.some(c => c.name.includes('HRC Discount Voucher')));
+      assert.ok(program.components.some(c => c.name.includes('HRC Happiness Planner Kit')));
+      assert.ok(program.components.some(c => c.name.includes('Yuvaparipalan Foundation Lifetime Membership')));
+      assert.ok(program.components.some(c => c.name.includes('Youth Empowerment Scholarship Contribution')));
     });
 
     it('reconciles legacy alias CCPM100 to canonical published CCPAM100 dynamically', async () => {

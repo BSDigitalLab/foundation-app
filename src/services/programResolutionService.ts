@@ -21,6 +21,17 @@ export interface PublicProgramCommercials {
   currency: string;
 }
 
+export interface PublicProgramComponent {
+  id: string;
+  name: string;
+  offering_type: string;
+  delivery_type?: string;
+  quantity: number;
+  unit_of_measure?: string;
+  image_url?: string | null;
+  description?: string | null;
+}
+
 export interface PublicProgram {
   id: string;
   program_code: string;
@@ -34,6 +45,7 @@ export interface PublicProgram {
   duration?: string | null;
   thumbnail_url?: string | null;
   commercials: PublicProgramCommercials;
+  components?: PublicProgramComponent[];
   published_at?: string;
 }
 
@@ -96,7 +108,31 @@ export const fetchPublicPrograms = async (forceRefresh = false): Promise<PublicP
     }
 
     const json = await res.json();
-    const programs: PublicProgram[] = Array.isArray(json?.data) ? json.data : [];
+    const rawPrograms: any[] = Array.isArray(json?.data) ? json.data : [];
+
+    // Hydrate components & offerings for each program from the single source of truth public slug API
+    const programs: PublicProgram[] = await Promise.all(
+      rawPrograms.map(async (prog) => {
+        if (!prog.public_slug) return prog as PublicProgram;
+        try {
+          const detailRes = await fetch(`${apiBase}/api/v1/public/programs/${encodeURIComponent(prog.public_slug)}`, {
+            headers: { 'Accept': 'application/json' },
+          });
+          if (detailRes.ok) {
+            const detailJson = await detailRes.json();
+            if (detailJson?.data?.components) {
+              return {
+                ...prog,
+                components: detailJson.data.components,
+              } as PublicProgram;
+            }
+          }
+        } catch {
+          // Fallback to basic program item on network failure
+        }
+        return prog as PublicProgram;
+      })
+    );
 
     cachedPrograms = programs;
     cacheExpiry = now + CACHE_TTL_MS;

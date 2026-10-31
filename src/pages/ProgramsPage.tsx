@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { getPlatformApiBaseUrl } from '../config/apiConfig';
+import { fetchPublicPrograms, PublicProgramComponent } from '../services/programResolutionService';
 
 interface PublishedProgramItem {
   id: string;
@@ -31,6 +32,7 @@ interface PublishedProgramItem {
     currency: string;
   };
   highlights?: string[];
+  components?: PublicProgramComponent[];
   impactTarget?: string;
   category: 'education' | 'tech' | 'entrepreneurship' | 'health' | 'community';
   iconName: string;
@@ -152,21 +154,17 @@ export const ProgramsPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const apiBase = getPlatformApiBaseUrl();
-      const res = await fetch(`${apiBase}/api/v1/public/programs`, {
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error(`Catalogue service responded with HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
-      if (data && data.status === 'SUCCESS' && Array.isArray(data.data)) {
-        const mapped: PublishedProgramItem[] = data.data.map((item: any) => {
+      // Authoritative Single Source of Truth resolution via programResolutionService
+      const programs = await fetchPublicPrograms(true);
+      if (Array.isArray(programs) && programs.length > 0) {
+        const mapped: PublishedProgramItem[] = programs.map((item) => {
           const inferred = inferCategoryAndIcon(item.name || '', item.description || '');
+          
+          // Authoritative highlights: derive from genuine submodules/components if present in SOT
+          const authoritativeHighlights = (item.components && item.components.length > 0)
+            ? item.components.map(c => c.name)
+            : inferred.highlights;
+
           return {
             id: item.id,
             program_code: item.program_code,
@@ -177,7 +175,7 @@ export const ProgramsPage: React.FC = () => {
             description: item.description || 'Comprehensive program empowering youth with future-ready skills and mentorship.',
             status: item.status || 'PUBLISHED',
             learning_mode: item.learning_mode || 'ONLINE',
-            duration: item.duration || '6 Months',
+            duration: item.duration || '12 Months',
             thumbnail_url: item.thumbnail_url,
             commercials: {
               market_price: Number(item.commercials?.market_price) || 0,
@@ -186,7 +184,8 @@ export const ProgramsPage: React.FC = () => {
               gst_amount: Number(item.commercials?.gst_amount) || 0,
               currency: item.commercials?.currency || 'INR',
             },
-            highlights: inferred.highlights,
+            highlights: authoritativeHighlights,
+            components: item.components,
             impactTarget: inferred.impactTarget,
             category: inferred.category,
             iconName: inferred.iconName,
@@ -387,12 +386,41 @@ export const ProgramsPage: React.FC = () => {
                             </div>
                           </div>
 
-                          <p className="text-sm text-slate-700 leading-relaxed font-medium">
-                            {program.description}
-                          </p>
+                          {/* Authoritative Program Summary / Short Description */}
+                          <div className="space-y-2">
+                            <p className="text-sm text-slate-700 leading-relaxed font-medium">
+                              {program.description}
+                            </p>
+                          </div>
 
-                          {/* Program Highlights */}
-                          {program.highlights && program.highlights.length > 0 && (
+                          {/* Curated Submodules & Key Inclusions from SOT */}
+                          {program.components && program.components.length > 0 ? (
+                            <div className="space-y-3 flex-1 flex flex-col pt-1">
+                              <div className="flex items-center justify-between border-b border-emerald-900/10 pb-1.5">
+                                <h4 className="font-heading font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                  <Sparkle className="w-3.5 h-3.5 text-emerald-700" /> Submodules & Member Inclusions ({program.components.length})
+                                </h4>
+                                <span className="text-[10px] font-mono text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                  Single Source of Truth
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-slate-700 font-medium">
+                                {program.components.map((comp) => (
+                                  <div key={comp.id} className="flex flex-col bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-200 hover:bg-emerald-50 transition-colors">
+                                    <div className="flex items-start gap-2">
+                                      <CheckCircle2 className="w-4 h-4 text-emerald-800 shrink-0 mt-0.5" />
+                                      <span className="font-bold text-slate-900 leading-tight">{comp.name}</span>
+                                    </div>
+                                    {comp.description && (
+                                      <p className="text-[11px] text-slate-600 font-normal mt-1 pl-6 leading-relaxed line-clamp-2">
+                                        {comp.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : program.highlights && program.highlights.length > 0 ? (
                             <div className="space-y-2 flex-1 flex flex-col">
                               <h4 className="font-heading font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
                                 <Sparkle className="w-3.5 h-3.5 text-emerald-700" /> Key Inclusions & Benefits:
@@ -406,7 +434,7 @@ export const ProgramsPage: React.FC = () => {
                                 ))}
                               </div>
                             </div>
-                          )}
+                          ) : null}
 
                           {/* Pricing & Commercials */}
                           <div className="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-200 flex items-center justify-between">
