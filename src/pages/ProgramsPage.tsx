@@ -269,15 +269,10 @@ export const ProgramsPage: React.FC = () => {
                     program.program_code === 'CESP100' ||
                     program.public_slug.includes('career-excellence');
 
-                  const subsidyPercentage =
-                    program.commercials.market_price > program.commercials.subscription_price &&
-                    program.commercials.market_price > 0
-                      ? Math.round(
-                          ((program.commercials.market_price - program.commercials.subscription_price) /
-                            program.commercials.market_price) *
-                            100
-                        )
-                      : 0;
+                                    const primaryOfferingType = program.components?.find(c => c.offering_type)?.offering_type;
+                  const programType = primaryOfferingType
+                    ? primaryOfferingType.charAt(0).toUpperCase() + primaryOfferingType.slice(1).toLowerCase().replace('_', ' ')
+                    : 'Membership';
 
                   return (
                     <FadeIn key={program.id || program.program_code} direction="up" delay={idx * 0.05} className="w-full">
@@ -285,70 +280,66 @@ export const ProgramsPage: React.FC = () => {
                         id={program.public_slug}
                         className="w-full rounded-3xl bg-white border border-emerald-900/15 hover:border-emerald-700/40 transition-all duration-300 shadow-sm hover:shadow-xl relative overflow-hidden p-6 sm:p-8 lg:p-10 space-y-8"
                       >
-                        {/* TOP SECTION: 2-COLUMN FULL-WIDTH HERO */}
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                        {/* TOP SECTION: 2-COLUMN FULL-WIDTH HERO (EQUAL HEIGHT) */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
                           {/* LEFT: Identity, Badges & Narrative (lg:col-span-8) */}
-                          <div className="lg:col-span-8 space-y-4">
-                            {/* Badges Bar */}
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge variant="emerald" className="font-mono text-xs px-2.5 py-1">
-                                {program.program_code}
-                              </Badge>
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-mono uppercase bg-emerald-100 text-emerald-900 border border-emerald-300">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                                Enrolling Now
-                              </span>
-                              {program.duration && (
-                                <span className="text-xs font-mono font-semibold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
-                                  {program.duration} • {program.learning_mode || 'HYBRID'}
+                          <div className="lg:col-span-8 flex flex-col justify-between space-y-4">
+                            <div className="space-y-4">
+                              {/* Badges Bar */}
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant="emerald" className="font-mono text-xs px-2.5 py-1">
+                                  {program.program_code}
+                                </Badge>
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-mono uppercase bg-emerald-100 text-emerald-900 border border-emerald-300">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                                  Enrolling Now
                                 </span>
-                              )}
-                              <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-                                <Sparkle className="w-3 h-3 text-emerald-700" />
-                                Single Source of Truth
-                              </span>
-                            </div>
-
-                            {/* Title & Icon */}
-                            <div className="flex items-start gap-4 pt-1">
-                              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 shrink-0 mt-1">
-                                {iconMap[program.iconName] || <Sparkles className="w-8 h-8 text-emerald-800" />}
-                              </div>
-                              <div>
-                                <h3 className="font-heading font-black text-2xl sm:text-3xl lg:text-4xl text-slate-950 tracking-tight leading-tight">
-                                  {program.name}
-                                </h3>
-                                {program.impactTarget && (
-                                  <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-800 mt-1.5">
-                                    <Target className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                                    <span>Target Impact: {program.impactTarget}</span>
-                                  </div>
+                                {program.duration && (
+                                  <span className="text-xs font-mono font-semibold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                                    {program.duration} • {program.learning_mode || 'HYBRID'}
+                                  </span>
                                 )}
+                                <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+                                  <Sparkle className="w-3 h-3 text-emerald-700" />
+                                  Single Source of Truth
+                                </span>
                               </div>
-                            </div>
 
-                            {/* Authoritative Program Summary / Description */}
-                            <div className="pt-2">
-                              <p className="text-sm sm:text-base text-slate-700 leading-relaxed font-normal">
-                                {program.description}
-                              </p>
+                              {/* Title & Icon */}
+                              <div className="flex items-start gap-4 pt-1">
+                                <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 shrink-0 mt-1">
+                                  {iconMap[program.iconName] || <Sparkles className="w-8 h-8 text-emerald-800" />}
+                                </div>
+                                <div>
+                                  <h3 className="font-heading font-black text-2xl sm:text-3xl lg:text-4xl text-slate-950 tracking-tight leading-tight">
+                                    {program.name}
+                                  </h3>
+                                  {program.impactTarget && (
+                                    <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-800 mt-1.5">
+                                      <Target className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                                      <span>Target Impact: {program.impactTarget}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Authoritative Program Summary / Description */}
+                              <div className="pt-2">
+                                <p className="text-sm sm:text-base text-slate-700 leading-relaxed font-normal">
+                                  {program.description}
+                                </p>
+                              </div>
                             </div>
                           </div>
 
-                          {/* RIGHT: Commercials & Enrollment Action Card (lg:col-span-4) */}
-                          <div className="lg:col-span-4 bg-gradient-to-br from-emerald-50/90 via-emerald-50/50 to-white p-6 sm:p-7 rounded-3xl border border-emerald-200/90 shadow-xs flex flex-col justify-between space-y-5">
-                            <div>
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-emerald-900 block">
-                                  Candidate Subscription Rate
-                                </span>
-                                {subsidyPercentage > 0 && (
-                                  <span className="text-[10px] font-mono font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
-                                    {subsidyPercentage}% SCHOLARSHIP SUBSIDY
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-baseline gap-3 mt-1.5">
+                          {/* RIGHT: Price Card with matching height and clean structure (lg:col-span-4) */}
+                          <div className="lg:col-span-4 bg-gradient-to-br from-emerald-50/90 via-emerald-50/50 to-white p-6 sm:p-7 rounded-3xl border border-emerald-200/90 shadow-xs flex flex-col justify-between h-full">
+                            <div className="space-y-1.5">
+                              {/* Program Type text before price */}
+                              <span className="text-xs sm:text-sm font-bold font-mono text-emerald-900 uppercase tracking-wider block">
+                                {programType}
+                              </span>
+                              <div className="flex items-baseline gap-3">
                                 <span className="text-3xl sm:text-4xl font-black text-slate-950 font-mono tracking-tight">
                                   {program.commercials.subscription_price > 0
                                     ? `₹${program.commercials.subscription_price.toLocaleString('en-IN')}`
@@ -360,12 +351,9 @@ export const ProgramsPage: React.FC = () => {
                                   </span>
                                 )}
                               </div>
-                              <p className="text-[11px] text-slate-600 font-medium mt-2 leading-snug">
-                                Transparent pricing approved under Foundation Educational Subsidy framework.
-                              </p>
                             </div>
 
-                            <div className="space-y-3 pt-2">
+                            <div className="pt-4">
                               {isChangepreneur ? (
                                 <Link to="/programs/changepreneur-circle" className="w-full block">
                                   <button className="w-full bg-[#15803d] hover:bg-[#166534] text-white font-black text-sm px-6 py-3.5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02] flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-emerald-700">
@@ -392,9 +380,9 @@ export const ProgramsPage: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* BOTTOM SECTION: SUBMODULES & PRODUCT OFFERINGS STRUCTURED GRID */}
+                        {/* BOTTOM SECTION: SUBMODULES AS 3 FULL-WIDTH PRODUCT IMAGE CARDS PER ROW */}
                         {program.components && program.components.length > 0 ? (
-                          <div className="pt-8 border-t border-emerald-900/10 space-y-4">
+                          <div className="pt-8 border-t border-emerald-900/10 space-y-6">
                             {/* Section Header */}
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                               <div className="flex items-center gap-2.5">
@@ -415,99 +403,29 @@ export const ProgramsPage: React.FC = () => {
                               </span>
                             </div>
 
-                            {/* Structured Submodule Cards Grid using full width */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 pt-2">
+                            {/* 3 Full-Width Product Image Cards in a row */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 pt-2">
                               {program.components.map((comp, compIdx) => (
                                 <div
                                   key={comp.id || compIdx}
-                                  className="bg-slate-50/70 hover:bg-emerald-50/40 rounded-2xl border border-slate-200 hover:border-emerald-300 p-4 transition-all duration-200 flex flex-col justify-between group/card shadow-2xs hover:shadow-sm"
+                                  className="rounded-2xl overflow-hidden bg-white border border-slate-200/80 hover:border-emerald-500/40 shadow-xs hover:shadow-xl transition-all duration-300 group flex items-center justify-center p-3 sm:p-4"
                                 >
-                                  <div className="space-y-3">
-                                    {/* Top row with Submodule Product Image + Head and Badges */}
-                                    <div className="flex items-start gap-3">
-                                      {comp.image_url ? (
-                                        <img
-                                          src={comp.image_url}
-                                          alt={comp.name}
-                                          className="w-14 h-14 rounded-xl object-contain bg-white p-1.5 border border-slate-200/90 shadow-2xs shrink-0 group-hover/card:scale-105 transition-transform"
-                                          loading="lazy"
-                                          onError={(e) => {
-                                            (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                          }}
-                                        />
-                                      ) : (
-                                        <div className="w-14 h-14 rounded-xl bg-emerald-100/80 border border-emerald-200 flex items-center justify-center shrink-0 text-emerald-800">
-                                          <Layers className="w-6 h-6" />
-                                        </div>
-                                      )}
-
-                                      <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                          {comp.offering_type && (
-                                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-900 border border-emerald-300 uppercase">
-                                              {comp.offering_type.replace('_', ' ')}
-                                            </span>
-                                          )}
-                                          {comp.delivery_type && (
-                                            <span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-white text-slate-600 border border-slate-200 uppercase">
-                                              {comp.delivery_type.replace('_', ' ')}
-                                            </span>
-                                          )}
-                                        </div>
-                                        <h5 className="font-heading font-extrabold text-xs sm:text-sm text-slate-950 mt-1 leading-snug line-clamp-2">
-                                          {comp.name}
-                                        </h5>
-                                      </div>
+                                  {comp.image_url ? (
+                                    <img
+                                      src={comp.image_url}
+                                      alt={comp.name}
+                                      className="w-full h-auto object-contain rounded-xl group-hover:scale-[1.02] transition-transform duration-300"
+                                      loading="lazy"
+                                      onError={(e) => {
+                                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-full aspect-[4/3] rounded-xl bg-emerald-50/60 border border-emerald-200 flex flex-col items-center justify-center p-6 text-center text-emerald-800">
+                                      <Layers className="w-10 h-10 mb-2 opacity-60" />
+                                      <span className="font-heading font-bold text-sm text-slate-800">{comp.name}</span>
                                     </div>
-
-                                    {/* Submodule Short Description */}
-                                    {comp.description && (
-                                      <p
-                                        className="text-[11px] sm:text-xs text-slate-600 font-normal leading-relaxed line-clamp-3"
-                                        title={comp.description}
-                                      >
-                                        {comp.description}
-                                      </p>
-                                    )}
-
-                                    {/* Nested Submodules / Curriculum Modules (e.g. 7 Changepreneur Masterclasses) */}
-                                    {comp.submodules && comp.submodules.length > 0 && (
-                                      <div className="pt-2.5 border-t border-emerald-900/10 space-y-1.5">
-                                        <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-950 flex items-center gap-1">
-                                          <Sparkle className="w-2.5 h-2.5 text-emerald-700" /> Integrated Modules ({comp.submodules.length}):
-                                        </div>
-                                        <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
-                                          {comp.submodules.map((sm, sIdx) => (
-                                            <span
-                                              key={sIdx}
-                                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-white text-slate-800 border border-emerald-200 shadow-2xs"
-                                              title={`${sm.name} (${sm.type})`}
-                                            >
-                                              <CheckCircle2 className="w-2 h-2 text-emerald-600 shrink-0" />
-                                              <span className="truncate max-w-[130px]">{sm.name}</span>
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Key Highlights */}
-                                    {comp.key_highlights && comp.key_highlights.length > 0 && (
-                                      <div className="pt-2 border-t border-emerald-900/10 space-y-1">
-                                        <div className="flex flex-wrap gap-1">
-                                          {comp.key_highlights.map((kh, khIdx) => (
-                                            <span
-                                              key={khIdx}
-                                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-white text-slate-700 border border-emerald-200/80"
-                                            >
-                                              <CheckCircle2 className="w-2 h-2 text-emerald-600 shrink-0" />
-                                              <span className="truncate max-w-[130px]">{kh}</span>
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -528,8 +446,7 @@ export const ProgramsPage: React.FC = () => {
                           </div>
                         ) : null}
                       </div>
-                    </FadeIn>
-                  );
+                    </FadeIn>       );
                 })}
               </div>
             ) : (
