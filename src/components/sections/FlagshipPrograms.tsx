@@ -100,8 +100,12 @@ export const FlagshipPrograms: React.FC = () => {
                 <div className="pt-4 border-t border-slate-100 space-y-2">
                   <div className="w-20 h-4 bg-slate-200 rounded" />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div className="w-full h-12 bg-slate-100 rounded-xl" />
-                    <div className="w-full h-12 bg-slate-100 rounded-xl" />
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="p-2 sm:p-2.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-slate-200 shrink-0" />
+                        <div className="w-3/4 h-3.5 bg-slate-200 rounded flex-1" />
+                      </div>
+                    ))}
                   </div>
                 </div>
                 <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
@@ -166,7 +170,7 @@ export const FlagshipPrograms: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* OFFERING SECTION: Submodule Product / Service Bullet Subcards (2 Columns Side by Side) */}
+                      {/* OFFERING SECTION: Submodule Product Image + Head Only (2 Columns Side by Side) */}
                       {program.components && program.components.length > 0 && (
                         <div className="pt-4 border-t border-slate-100 space-y-3">
                           <div className="flex items-center justify-between">
@@ -178,23 +182,32 @@ export const FlagshipPrograms: React.FC = () => {
                             </span>
                           </div>
 
-                          {/* Submodule Bullet Subcards: 2 Columns Side by Side */}
+                          {/* Submodule Product Image + Head Only Cards */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                             {program.components.map((comp) => (
                               <div
                                 key={comp.id || comp.name}
-                                className="p-2.5 sm:p-3 rounded-xl bg-slate-50/80 hover:bg-emerald-50/40 border border-slate-200/70 hover:border-emerald-200 transition-colors flex items-start gap-2.5 text-left"
+                                className="p-2 sm:p-2.5 rounded-2xl bg-white hover:bg-emerald-50/30 border border-slate-200/80 hover:border-emerald-300/80 hover:shadow-xs transition-all duration-200 flex items-center gap-3 text-left group/sub"
                               >
-                                <div className="w-2 h-2 rounded-full bg-emerald-600 shrink-0 mt-1.5" />
-                                <div className="min-w-0 flex-1 space-y-0.5">
-                                  <span className="font-heading font-bold text-xs text-slate-950 block leading-tight">
+                                {/* Product Image */}
+                                <div className="w-12 h-12 sm:w-13 sm:h-13 shrink-0 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center p-1 overflow-hidden group-hover/sub:scale-105 transition-transform">
+                                  {comp.image_url ? (
+                                    <img
+                                      src={comp.image_url}
+                                      alt={comp.name}
+                                      className="w-full h-full object-contain rounded-lg"
+                                      loading="lazy"
+                                    />
+                                  ) : (
+                                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
+                                  )}
+                                </div>
+
+                                {/* Submodule Head Only */}
+                                <div className="min-w-0 flex-1">
+                                  <span className="font-heading font-bold text-xs sm:text-[13px] text-slate-900 group-hover/sub:text-emerald-950 transition-colors block leading-snug">
                                     {comp.name}
                                   </span>
-                                  {comp.description && (
-                                    <p className="text-[11px] text-slate-600 leading-relaxed font-normal line-clamp-2">
-                                      {comp.description}
-                                    </p>
-                                  )}
                                 </div>
                               </div>
                             ))}
