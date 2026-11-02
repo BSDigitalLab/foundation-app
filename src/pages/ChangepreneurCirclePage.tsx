@@ -1528,16 +1528,11 @@ export const ChangepreneurCirclePage: React.FC = () => {
                 [1, 2, 3, 4, 5, 6, 7].map((n) => (
                   <div
                     key={n}
-                    className="p-6 rounded-2xl bg-[#fafaf7] border border-slate-200 animate-pulse h-full flex flex-col justify-between space-y-4 min-h-[220px]"
+                    className="p-5 sm:p-6 rounded-2xl bg-[#fafaf7] border border-slate-200 animate-pulse h-full flex flex-col justify-between space-y-4 min-h-[240px]"
                   >
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="w-12 h-12 rounded-xl bg-slate-200" />
-                        <div className="w-6 h-4 bg-slate-200 rounded" />
-                      </div>
+                      <div className="w-full aspect-[4/3] rounded-xl bg-slate-200" />
                       <div className="w-4/5 h-5 bg-slate-200 rounded" />
-                      <div className="w-full h-3 bg-slate-100 rounded" />
-                      <div className="w-3/4 h-3 bg-slate-100 rounded" />
                     </div>
                     <div className="pt-3 border-t border-slate-200">
                       <div className="w-24 h-4 bg-slate-200 rounded-full" />
@@ -1558,36 +1553,32 @@ export const ChangepreneurCirclePage: React.FC = () => {
                         }
                       }}
                       aria-label={`View details for ${comp.name}`}
-                      className="p-6 rounded-2xl bg-[#fafaf7] border border-emerald-900/10 hover:border-emerald-700/40 hover:shadow-lg transition-all h-full flex flex-col justify-between space-y-4 cursor-pointer group text-left"
+                      className="p-5 sm:p-6 rounded-2xl bg-[#fafaf7] border border-emerald-900/10 hover:border-emerald-700/40 hover:shadow-lg transition-all h-full flex flex-col justify-between space-y-4 cursor-pointer group text-left"
                     >
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
+                      <div className="space-y-3.5">
+                        {/* Submodule Product Image in Full Width */}
+                        <div className="w-full aspect-[4/3] rounded-xl bg-white border border-slate-200/80 p-3 sm:p-4 flex items-center justify-center overflow-hidden relative group-hover:scale-[1.01] transition-transform">
                           {comp.image_url ? (
-                            <div className="w-12 h-12 rounded-xl bg-white border border-slate-200/80 p-1 flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
-                              <img
-                                src={comp.image_url}
-                                alt={comp.name}
-                                className="w-full h-full object-contain"
-                                loading="lazy"
-                              />
-                            </div>
+                            <img
+                              src={comp.image_url}
+                              alt={comp.name}
+                              className="w-full h-full object-contain"
+                              loading="lazy"
+                            />
                           ) : (
-                            <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-800">
-                              <Sparkles className="w-5 h-5" />
+                            <div className="p-3 rounded-xl bg-emerald-100 text-emerald-800">
+                              <Sparkles className="w-8 h-8" />
                             </div>
                           )}
-                          <span className="text-xs font-mono font-bold text-slate-400">
+                          <span className="absolute top-2.5 right-2.5 text-xs font-mono font-bold text-slate-500 bg-white/95 backdrop-blur-xs px-2 py-0.5 rounded-md border border-slate-200/80 shadow-2xs">
                             {String(idx + 1).padStart(2, '0')}
                           </span>
                         </div>
-                        <h3 className="font-heading font-extrabold text-lg text-slate-950 leading-snug group-hover:text-emerald-900 transition-colors">
+
+                        {/* Submodule Head Placed Under Product Image */}
+                        <h3 className="font-heading font-extrabold text-base sm:text-lg text-slate-950 leading-snug group-hover:text-emerald-900 transition-colors">
                           {comp.name}
                         </h3>
-                        {comp.description && (
-                          <p className="text-xs text-slate-600 leading-relaxed font-normal line-clamp-3">
-                            {comp.description}
-                          </p>
-                        )}
                       </div>
 
                       <div className="pt-3 border-t border-slate-200/80 flex items-center justify-between">
