@@ -82,11 +82,11 @@ export const FlagshipPrograms: React.FC = () => {
           </div>
         </FadeIn>
 
-        {/* Program Cards Grid: Three Cards Per Row on Desktop */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+        {/* Program Cards Grid: Two Cards Per Row on Desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
           {loading ? (
             /* Skeleton Loading Cards */
-            [1, 2, 3].map((n) => (
+            [1, 2].map((n) => (
               <div key={n} className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200 animate-pulse space-y-5">
                 <div className="flex items-start gap-4">
                   <div className="w-24 h-24 sm:w-32 sm:h-32 lg:w-36 lg:h-36 rounded-2xl bg-slate-200 shrink-0" />
@@ -99,8 +99,10 @@ export const FlagshipPrograms: React.FC = () => {
                 </div>
                 <div className="pt-4 border-t border-slate-100 space-y-2">
                   <div className="w-20 h-4 bg-slate-200 rounded" />
-                  <div className="w-full h-12 bg-slate-100 rounded-xl" />
-                  <div className="w-full h-12 bg-slate-100 rounded-xl" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="w-full h-12 bg-slate-100 rounded-xl" />
+                    <div className="w-full h-12 bg-slate-100 rounded-xl" />
+                  </div>
                 </div>
                 <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
                   <div className="w-28 h-4 bg-slate-100 rounded" />
@@ -164,7 +166,7 @@ export const FlagshipPrograms: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* OFFERING SECTION: Submodule Product / Service Bullet Subcards */}
+                      {/* OFFERING SECTION: Submodule Product / Service Bullet Subcards (2 Columns Side by Side) */}
                       {program.components && program.components.length > 0 && (
                         <div className="pt-4 border-t border-slate-100 space-y-3">
                           <div className="flex items-center justify-between">
@@ -176,8 +178,8 @@ export const FlagshipPrograms: React.FC = () => {
                             </span>
                           </div>
 
-                          {/* Submodule Bullet Subcards List */}
-                          <div className="space-y-2">
+                          {/* Submodule Bullet Subcards: 2 Columns Side by Side */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                             {program.components.map((comp) => (
                               <div
                                 key={comp.id || comp.name}
