@@ -54,6 +54,7 @@ import {
 import {
   resolveProgramByCode,
   PublicProgram,
+  PublicProgramComponent,
   ProgramResolutionError
 } from '../services/programResolutionService';
 import { useCustomerAuthStore } from '../stores/useCustomerAuthStore';
@@ -1261,7 +1262,43 @@ const HeroBackground: React.FC = () => {
 
 export const ChangepreneurCirclePage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [resolvedProgram, setResolvedProgram] = useState<PublicProgram | null>(null);
+  const [selectedSubmodule, setSelectedSubmodule] = useState<PublicProgramComponent | null>(null);
+  const [isLoadingProgram, setIsLoadingProgram] = useState<boolean>(true);
   const empowerSectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    resolveProgramByCode('CCPAM100', {
+      aliasCodes: ['CCPM100'],
+      fallbackSlugs: ['changepreneur-circle-premium-annual-membership', 'changepreneur-circle'],
+      forceRefresh: true
+    })
+      .then((program) => {
+        if (isMounted) {
+          setResolvedProgram(program);
+          setIsLoadingProgram(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('[ChangepreneurCirclePage] SOT resolution note:', err);
+        if (isMounted) setIsLoadingProgram(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedSubmodule(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const { scrollYProgress: empowerScrollY } = useScroll({
     target: empowerSectionRef,
@@ -1473,7 +1510,9 @@ export const ChangepreneurCirclePage: React.FC = () => {
                 </h2>
                 <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
                   <span className="font-heading text-5xl sm:text-6xl font-black text-emerald-900 tracking-tight">
-                    ₹30,000/-
+                    {resolvedProgram?.commercials?.subscription_price
+                      ? `₹${resolvedProgram.commercials.subscription_price.toLocaleString('en-IN')}/-`
+                      : '₹30,000/-'}
                   </span>
                   <span className="text-slate-600 font-bold text-lg sm:text-xl">
                     Annual Membership Fee
@@ -1482,234 +1521,98 @@ export const ChangepreneurCirclePage: React.FC = () => {
               </div>
             </FadeIn>
 
-            {/* 12 Membership Inclusions Responsive Grid */}
+            {/* Canonical Membership Inclusions Responsive Grid (Tile-Based View) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              {/* 1. CAERING */}
-              <FadeIn direction="up" delay={0.03}>
-                <div className="p-6 rounded-2xl bg-[#fafaf7] border border-emerald-900/10 hover:border-emerald-700/40 hover:shadow-lg transition-all h-full flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-800">
-                        <Activity className="w-5 h-5" />
+              {isLoadingProgram ? (
+                /* Skeleton Loading State */
+                [1, 2, 3, 4, 5, 6, 7].map((n) => (
+                  <div
+                    key={n}
+                    className="p-6 rounded-2xl bg-[#fafaf7] border border-slate-200 animate-pulse h-full flex flex-col justify-between space-y-4 min-h-[220px]"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="w-12 h-12 rounded-xl bg-slate-200" />
+                        <div className="w-6 h-4 bg-slate-200 rounded" />
                       </div>
-                      <span className="text-xs font-mono font-bold text-slate-400">01</span>
+                      <div className="w-4/5 h-5 bg-slate-200 rounded" />
+                      <div className="w-full h-3 bg-slate-100 rounded" />
+                      <div className="w-3/4 h-3 bg-slate-100 rounded" />
                     </div>
-                    <h3 className="font-heading font-extrabold text-lg text-slate-950 leading-snug">
-                      CAERING
-                    </h3>
+                    <div className="pt-3 border-t border-slate-200">
+                      <div className="w-24 h-4 bg-slate-200 rounded-full" />
+                    </div>
                   </div>
-                  <div className="pt-3 border-t border-slate-200/80">
-                    <span className="text-sm font-bold text-emerald-900">
-                      Fitness Ring
-                    </span>
-                  </div>
-                </div>
-              </FadeIn>
+                ))
+              ) : resolvedProgram?.components && resolvedProgram.components.length > 0 ? (
+                resolvedProgram.components.map((comp, idx) => (
+                  <FadeIn key={comp.id || comp.name} direction="up" delay={0.03 * (idx + 1)}>
+                    <div
+                      onClick={() => setSelectedSubmodule(comp)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSelectedSubmodule(comp);
+                        }
+                      }}
+                      aria-label={`View details for ${comp.name}`}
+                      className="p-6 rounded-2xl bg-[#fafaf7] border border-emerald-900/10 hover:border-emerald-700/40 hover:shadow-lg transition-all h-full flex flex-col justify-between space-y-4 cursor-pointer group text-left"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          {comp.image_url ? (
+                            <div className="w-12 h-12 rounded-xl bg-white border border-slate-200/80 p-1 flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
+                              <img
+                                src={comp.image_url}
+                                alt={comp.name}
+                                className="w-full h-full object-contain"
+                                loading="lazy"
+                              />
+                            </div>
+                          ) : (
+                            <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-800">
+                              <Sparkles className="w-5 h-5" />
+                            </div>
+                          )}
+                          <span className="text-xs font-mono font-bold text-slate-400">
+                            {String(idx + 1).padStart(2, '0')}
+                          </span>
+                        </div>
+                        <h3 className="font-heading font-extrabold text-lg text-slate-950 leading-snug group-hover:text-emerald-900 transition-colors">
+                          {comp.name}
+                        </h3>
+                        {comp.description && (
+                          <p className="text-xs text-slate-600 leading-relaxed font-normal line-clamp-3">
+                            {comp.description}
+                          </p>
+                        )}
+                      </div>
 
-              {/* 2. Palana Neurosync */}
-              <FadeIn direction="up" delay={0.06}>
-                <div className="p-6 rounded-2xl bg-[#fafaf7] border border-amber-900/15 hover:border-amber-600/40 hover:shadow-lg transition-all h-full flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2.5 rounded-xl bg-amber-100 text-amber-800">
-                        <Brain className="w-5 h-5" />
+                      <div className="pt-3 border-t border-slate-200/80 flex items-center justify-between">
+                        {comp.submodules && comp.submodules.length > 0 ? (
+                          <span className="inline-block text-[11px] font-mono font-bold text-emerald-950 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                            {comp.submodules.length} Curriculum Modules
+                          </span>
+                        ) : comp.key_highlights && comp.key_highlights.length > 0 ? (
+                          <span className="inline-block text-[11px] font-mono font-bold text-emerald-950 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                            {comp.key_highlights.length} Key Highlights
+                          </span>
+                        ) : comp.delivery_type ? (
+                          <span className="text-xs font-bold text-emerald-900 font-mono">
+                            {comp.delivery_type.replace('_', ' ')}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-bold text-emerald-900 font-mono">
+                            Included
+                          </span>
+                        )}
                       </div>
-                      <span className="text-xs font-mono font-bold text-slate-400">02</span>
                     </div>
-                    <h3 className="font-heading font-extrabold text-lg text-slate-950 leading-snug">
-                      Palana Neurosync
-                    </h3>
-                    <p className="text-sm font-semibold text-slate-700">
-                      Anandha / Zayana
-                    </p>
-                  </div>
-                  <div className="pt-3 border-t border-slate-200/80">
-                    <span className="inline-block text-xs font-mono font-bold text-amber-900 bg-amber-100 px-3 py-1 rounded-full border border-amber-300">
-                      180 Days Subscription
-                    </span>
-                  </div>
-                </div>
-              </FadeIn>
-
-              {/* 3. Happiness Planner */}
-              <FadeIn direction="up" delay={0.09}>
-                <div className="p-6 rounded-2xl bg-[#fafaf7] border border-purple-900/10 hover:border-purple-600/40 hover:shadow-lg transition-all h-full flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2.5 rounded-xl bg-purple-100 text-purple-800">
-                        <BookOpen className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-mono font-bold text-slate-400">03</span>
-                    </div>
-                    <h3 className="font-heading font-extrabold text-lg text-slate-950 leading-snug">
-                      Happiness Planner
-                    </h3>
-                  </div>
-                </div>
-              </FadeIn>
-
-              {/* 4. HRC Discount Voucher */}
-              <FadeIn direction="up" delay={0.12}>
-                <div className="p-6 rounded-2xl bg-[#fafaf7] border border-emerald-900/15 hover:border-emerald-600/40 hover:shadow-lg transition-all h-full flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-800">
-                        <Tag className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-mono font-bold text-slate-400">04</span>
-                    </div>
-                    <h3 className="font-heading font-extrabold text-lg text-slate-950 leading-snug">
-                      HRC Discount Voucher
-                    </h3>
-                  </div>
-                  <div className="pt-3 border-t border-slate-200/80">
-                    <span className="inline-block text-xs font-mono font-bold text-emerald-950 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300">
-                      ₹5,000/- Discount Voucher
-                    </span>
-                  </div>
-                </div>
-              </FadeIn>
-
-              {/* 5. Yuvaparipalan Life Membership */}
-              <FadeIn direction="up" delay={0.15}>
-                <div className="p-6 rounded-2xl bg-[#fafaf7] border border-blue-900/10 hover:border-blue-600/40 hover:shadow-lg transition-all h-full flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2.5 rounded-xl bg-blue-100 text-blue-800">
-                        <ShieldCheck className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-mono font-bold text-slate-400">05</span>
-                    </div>
-                    <h3 className="font-heading font-extrabold text-lg text-slate-950 leading-snug">
-                      Yuvaparipalan Life Membership
-                    </h3>
-                  </div>
-                </div>
-              </FadeIn>
-
-              {/* 6. Youth Empowerment Scholarship Contribution */}
-              <FadeIn direction="up" delay={0.18}>
-                <div className="p-6 rounded-2xl bg-[#fafaf7] border border-emerald-900/15 hover:border-emerald-600/40 hover:shadow-lg transition-all h-full flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-800">
-                        <GraduationCap className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-mono font-bold text-slate-400">06</span>
-                    </div>
-                    <h3 className="font-heading font-extrabold text-lg text-slate-950 leading-snug">
-                      Youth Empowerment Scholarship Contribution
-                    </h3>
-                  </div>
-                  <div className="pt-3 border-t border-slate-200/80">
-                    <span className="inline-block text-xs font-mono font-bold text-emerald-950 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300">
-                      Contribution for 10 Students
-                    </span>
-                  </div>
-                </div>
-              </FadeIn>
-
-              {/* 7. Changepreneur Community Access */}
-              <FadeIn direction="up" delay={0.21}>
-                <div className="p-6 rounded-2xl bg-[#fafaf7] border border-slate-300/60 hover:border-slate-500 hover:shadow-lg transition-all h-full flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2.5 rounded-xl bg-slate-100 text-slate-800">
-                        <Users className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-mono font-bold text-slate-400">07</span>
-                    </div>
-                    <h3 className="font-heading font-extrabold text-lg text-slate-950 leading-snug">
-                      Changepreneur Community Access
-                    </h3>
-                  </div>
-                </div>
-              </FadeIn>
-
-              {/* 8. Personal & Professional Empowerment Program */}
-              <FadeIn direction="up" delay={0.24}>
-                <div className="p-6 rounded-2xl bg-[#fafaf7] border border-emerald-900/10 hover:border-emerald-700/40 hover:shadow-lg transition-all h-full flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-800">
-                        <Compass className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-mono font-bold text-slate-400">08</span>
-                    </div>
-                    <h3 className="font-heading font-extrabold text-lg text-slate-950 leading-snug">
-                      Personal & Professional Empowerment Program
-                    </h3>
-                  </div>
-                </div>
-              </FadeIn>
-
-              {/* 9. Leadership & Entrepreneurship Program */}
-              <FadeIn direction="up" delay={0.27}>
-                <div className="p-6 rounded-2xl bg-[#fafaf7] border border-amber-900/10 hover:border-amber-600/40 hover:shadow-lg transition-all h-full flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2.5 rounded-xl bg-amber-100 text-amber-800">
-                        <Briefcase className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-mono font-bold text-slate-400">09</span>
-                    </div>
-                    <h3 className="font-heading font-extrabold text-lg text-slate-950 leading-snug">
-                      Leadership & Entrepreneurship Program
-                    </h3>
-                  </div>
-                </div>
-              </FadeIn>
-
-              {/* 10. Digital Skills & AI Learning */}
-              <FadeIn direction="up" delay={0.3}>
-                <div className="p-6 rounded-2xl bg-[#fafaf7] border border-blue-900/10 hover:border-blue-600/40 hover:shadow-lg transition-all h-full flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2.5 rounded-xl bg-blue-100 text-blue-800">
-                        <Laptop className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-mono font-bold text-slate-400">10</span>
-                    </div>
-                    <h3 className="font-heading font-extrabold text-lg text-slate-950 leading-snug">
-                      Digital Skills & AI Learning
-                    </h3>
-                  </div>
-                </div>
-              </FadeIn>
-
-              {/* 11. Social Impact & Community Activities */}
-              <FadeIn direction="up" delay={0.33}>
-                <div className="p-6 rounded-2xl bg-[#fafaf7] border border-emerald-900/10 hover:border-emerald-700/40 hover:shadow-lg transition-all h-full flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-800">
-                        <HeartHandshake className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-mono font-bold text-slate-400">11</span>
-                    </div>
-                    <h3 className="font-heading font-extrabold text-lg text-slate-950 leading-snug">
-                      Social Impact & Community Activities
-                    </h3>
-                  </div>
-                </div>
-              </FadeIn>
-
-              {/* 12. Changepreneur Certificate */}
-              <FadeIn direction="up" delay={0.36}>
-                <div className="p-6 rounded-2xl bg-[#fafaf7] border border-purple-900/10 hover:border-purple-600/40 hover:shadow-lg transition-all h-full flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2.5 rounded-xl bg-purple-100 text-purple-800">
-                        <Award className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-mono font-bold text-slate-400">12</span>
-                    </div>
-                    <h3 className="font-heading font-extrabold text-lg text-slate-950 leading-snug">
-                      Changepreneur Certificate
-                    </h3>
-                  </div>
-                </div>
-              </FadeIn>
+                  </FadeIn>
+                ))
+              ) : null}
             </div>
           </div>
         </section>
@@ -2101,6 +2004,150 @@ export const ChangepreneurCirclePage: React.FC = () => {
           </div>
         </section>
       </div>
+
+      {/* Submodule Informative Popup Modal (Identical SOT modal harness) */}
+      {selectedSubmodule && (() => {
+        const nestedBenefits: string[] = [];
+        if (selectedSubmodule.submodules && selectedSubmodule.submodules.length > 0) {
+          selectedSubmodule.submodules.forEach((sm) => {
+            if (sm?.name && !nestedBenefits.includes(sm.name)) {
+              nestedBenefits.push(sm.name);
+            }
+          });
+        }
+        if (selectedSubmodule.key_highlights && selectedSubmodule.key_highlights.length > 0) {
+          selectedSubmodule.key_highlights.forEach((kh) => {
+            if (kh && !nestedBenefits.includes(kh)) {
+              nestedBenefits.push(kh);
+            }
+          });
+        }
+        const hasNestedSubmodules = nestedBenefits.length > 0;
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200"
+            onClick={() => setSelectedSubmodule(null)}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              className={`relative w-full ${
+                hasNestedSubmodules ? 'max-w-4xl' : 'max-w-lg'
+              } bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-end px-6 pt-4 pb-2 border-b border-slate-100">
+                <button
+                  onClick={() => setSelectedSubmodule(null)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none"
+                  aria-label="Close dialog"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 overflow-y-auto space-y-4">
+                {hasNestedSubmodules ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                    {selectedSubmodule.image_url && (
+                      <div className="sm:col-span-4 flex items-center justify-center bg-slate-50/70 p-3 rounded-2xl border border-slate-200/80">
+                        <img
+                          src={selectedSubmodule.image_url}
+                          alt={selectedSubmodule.name}
+                          className="max-h-32 sm:max-h-36 w-auto object-contain rounded-xl"
+                        />
+                      </div>
+                    )}
+                    <div className={selectedSubmodule.image_url ? 'sm:col-span-8 space-y-2' : 'sm:col-span-12 space-y-2'}>
+                      <h3 className="font-heading font-black text-xl text-slate-950 leading-snug">
+                        {selectedSubmodule.name}
+                      </h3>
+                      {selectedSubmodule.description && (
+                        <div className="bg-emerald-50/40 p-3.5 rounded-2xl border border-emerald-200/80">
+                          <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
+                            {selectedSubmodule.description}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {selectedSubmodule.image_url && (
+                      <div className="w-full flex items-center justify-center bg-slate-50/70 p-3 rounded-2xl border border-slate-200/80">
+                        <img
+                          src={selectedSubmodule.image_url}
+                          alt={selectedSubmodule.name}
+                          className="max-h-52 w-auto object-contain rounded-xl"
+                        />
+                      </div>
+                    )}
+                    <h3 className="font-heading font-black text-xl text-slate-950 leading-snug">
+                      {selectedSubmodule.name}
+                    </h3>
+                    {selectedSubmodule.description && (
+                      <div className="bg-emerald-50/40 p-4 rounded-2xl border border-emerald-200/80">
+                        <p className="text-sm text-slate-700 leading-relaxed font-normal">
+                          {selectedSubmodule.description}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Submodule Benefits: 2 columns in a row */}
+                {hasNestedSubmodules && (
+                  <div className="space-y-2.5 pt-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-900 block font-heading">
+                      Get access to,
+                    </span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      {nestedBenefits.map((itemText, idx) => {
+                        const match = itemText.match(/^([^\-–—]+)[\-–—](.+)$/);
+                        let head = itemText;
+                        let subtext: string | null = null;
+                        if (match) {
+                          head = match[1].trim();
+                          subtext = match[2].trim();
+                        }
+                        return (
+                          <div
+                            key={idx}
+                            className="flex items-start gap-2.5 p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 text-xs text-slate-800"
+                          >
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                            <div className="leading-snug min-w-0">
+                              <span className="font-bold text-slate-950 font-heading block">{head}</span>
+                              {subtext && (
+                                <span className="text-slate-600 font-normal block text-[11px] sm:text-xs mt-0.5">
+                                  {subtext}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end">
+                <button
+                  onClick={() => setSelectedSubmodule(null)}
+                  className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-colors shadow-sm focus:outline-none"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Governed Membership Application Modal */}
       <ApplicationModal isOpen={isModalOpen} onClose={closeModal} />
